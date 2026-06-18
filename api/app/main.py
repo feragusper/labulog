@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="LaburoLog API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Labulog API", version="0.1.0", lifespan=lifespan)
 
 if settings.cors_origin_list:
     app.add_middleware(

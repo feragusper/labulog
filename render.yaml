@@ -2,7 +2,7 @@
 # Push to GitHub, then in Render: New > Blueprint, point at this repo.
 services:
   - type: web
-    name: laburolog
+    name: labulog
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
@@ -10,7 +10,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: laburolog-db
+          name: labulog-db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
@@ -20,7 +20,7 @@ services:
         value: "10080"
 
 databases:
-  - name: laburolog-db
+  - name: labulog-db
     plan: free
     # NOTE: Render free Postgres expires ~90 days. Swap DATABASE_URL to a Neon
     # connection string later if you want a durable free DB.

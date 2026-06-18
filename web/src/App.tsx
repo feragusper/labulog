@@ -19,7 +19,7 @@ export default function App() {
   return (
     <>
       <div className="topbar">
-        <h1 className="brand">Laburo<span>Log</span></h1>
+        <h1 className="brand">Labu<span>Log</span></h1>
         {loggedIn && (
           <button className="ghost" onClick={() => { auth.clear(); location.reload(); }}>
             Salir ({meQuery.data?.email})

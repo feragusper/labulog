@@ -1,4 +1,4 @@
-# LaburoLog
+# Labulog
 
 Tracker de postulaciones a laburo + intel de mercado. Estilo [linprofi](https://linprofi.com/):
 seguí tus postulaciones, su timeline de estados, y cruzá cualquier job posting por URL

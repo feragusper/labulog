@@ -1,6 +1,6 @@
 // Thin fetch wrapper. Token lives in localStorage; API is same-origin (dev via vite proxy).
 
-const TOKEN_KEY = "laburolog_token";
+const TOKEN_KEY = "labulog_token";
 
 export const auth = {
   get token() {
