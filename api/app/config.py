@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-me"
     access_token_expire_minutes: int = 10080  # 7 days
     cors_origins: str = "http://localhost:5173"
+    google_client_id: str = ""  # OAuth client id; empty disables Google login
 
     @property
     def cors_origin_list(self) -> List[str]:

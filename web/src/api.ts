@@ -119,6 +119,17 @@ export const api = {
 
   me: () => request<{ id: number; email: string }>("/api/auth/me"),
 
+  authConfig: () => request<{ google_client_id: string }>("/api/auth/config"),
+
+  googleLogin: async (credential: string) => {
+    const data = await request<{ access_token: string }>("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential }),
+    });
+    auth.set(data.access_token);
+    return data;
+  },
+
   listApplications: () => request<Application[]>("/api/applications"),
 
   createApplication: (payload: unknown) =>

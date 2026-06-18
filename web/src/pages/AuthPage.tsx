@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api";
 
 export default function AuthPage() {
@@ -7,6 +7,52 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const googleBtn = useRef<HTMLDivElement>(null);
+
+  // Wire up the Google Identity button once the client id + GIS script are ready.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function setupGoogle() {
+      let clientId = "";
+      try {
+        clientId = (await api.authConfig()).google_client_id;
+      } catch {
+        return; // config endpoint unreachable -> skip Google
+      }
+      if (!clientId || cancelled) return;
+
+      // GIS script loads async; poll briefly until window.google exists.
+      const start = Date.now();
+      while (!window.google && Date.now() - start < 5000) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      if (!window.google || cancelled || !googleBtn.current) return;
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (resp) => {
+          setError("");
+          try {
+            await api.googleLogin(resp.credential);
+            location.reload();
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : "Google login falló");
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(googleBtn.current, {
+        theme: "outline",
+        size: "large",
+        width: 312,
+        text: "continue_with",
+        shape: "pill",
+      });
+    }
+
+    setupGoogle();
+    return () => { cancelled = true; };
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +91,10 @@ export default function AuthPage() {
           </button>
           {error && <div className="error">{error}</div>}
         </form>
+
+        <div className="divider"><span>o</span></div>
+        <div ref={googleBtn} style={{ display: "flex", justifyContent: "center" }} />
+
         <p className="muted" style={{ marginTop: 14, fontSize: 13 }}>
           {mode === "login" ? "¿No tenés cuenta? " : "¿Ya tenés cuenta? "}
           <a href="#" onClick={(e) => { e.preventDefault(); setError(""); setMode(mode === "login" ? "register" : "login"); }}>
