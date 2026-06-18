@@ -1,0 +1,26 @@
+# Render blueprint: one Docker web service + one managed Postgres.
+# Push to GitHub, then in Render: New > Blueprint, point at this repo.
+services:
+  - type: web
+    name: laburolog
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: laburolog-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: ""   # same-origin in prod; SPA served by the API itself
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "10080"
+
+databases:
+  - name: laburolog-db
+    plan: free
+    # NOTE: Render free Postgres expires ~90 days. Swap DATABASE_URL to a Neon
+    # connection string later if you want a durable free DB.
