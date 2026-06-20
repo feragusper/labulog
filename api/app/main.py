@@ -37,7 +37,9 @@ app.include_router(imports.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    # 'db' lets you confirm prod is on Postgres (persistent), not ephemeral sqlite.
+    from .db import engine
+    return {"status": "ok", "db": engine.dialect.name}
 
 
 # ---- serve the built React SPA (monolith deploy) ----
