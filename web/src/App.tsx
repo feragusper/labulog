@@ -5,6 +5,7 @@ import Layout from "./Layout";
 import AuthPage from "./pages/AuthPage";
 import Overview from "./pages/Overview";
 import Applications from "./pages/Applications";
+import ApplicationDetail from "./pages/ApplicationDetail";
 import LookupPage from "./pages/Lookup";
 import Settings from "./pages/Settings";
 
@@ -28,6 +29,7 @@ export default function App() {
       <Route element={<Layout email={meQuery.data?.email} />}>
         <Route index element={<Overview />} />
         <Route path="applications" element={<Applications />} />
+        <Route path="applications/:id" element={<ApplicationDetail />} />
         <Route path="lookup" element={<LookupPage />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />

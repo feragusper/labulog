@@ -132,6 +132,8 @@ export const api = {
 
   listApplications: () => request<Application[]>("/api/applications"),
 
+  getApplication: (id: number) => request<Application>(`/api/applications/${id}`),
+
   createApplication: (payload: unknown) =>
     request<Application>("/api/applications", { method: "POST", body: JSON.stringify(payload) }),
 

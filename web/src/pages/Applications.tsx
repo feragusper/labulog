@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application } from "../api";
 import { STATUSES } from "../components/ui";
 
@@ -56,7 +57,7 @@ function AppRow({ app, onChange }: { app: Application; onChange: () => void }) {
   return (
     <tr>
       <td>
-        <div><a href={app.posting.url} target="_blank" rel="noreferrer">{app.posting.title}</a></div>
+        <div><Link to={`/applications/${app.id}`}>{app.posting.title}</Link></div>
         <div className="muted" style={{ fontSize: 12 }}>
           {app.posting.seniority ?? ""} {app.posting.source ? `· ${app.posting.source}` : ""}
         </div>
