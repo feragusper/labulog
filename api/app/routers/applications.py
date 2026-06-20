@@ -6,13 +6,15 @@ from sqlmodel import Session, select
 from ..crud import upsert_posting
 from ..db import get_session
 from ..deps import get_current_user
-from ..models import Application, JobPosting, StatusEvent, User, utcnow
+from ..models import Application, Company, JobPosting, StatusEvent, User, utcnow
 from ..schemas import (
     ApplicationCreate,
     ApplicationRead,
     ApplicationUpdate,
     PostingRead,
+    StatusEventCreate,
     StatusEventRead,
+    StatusEventUpdate,
 )
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
@@ -20,6 +22,10 @@ router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 def _to_read(session: Session, app: Application) -> ApplicationRead:
     posting = session.get(JobPosting, app.posting_id)
+    posting_read = PostingRead.model_validate(posting, from_attributes=True)
+    if posting.company_id:
+        company = session.get(Company, posting.company_id)
+        posting_read.company_name = company.name if company else None
     events = session.exec(
         select(StatusEvent)
         .where(StatusEvent.application_id == app.id)
@@ -35,7 +41,7 @@ def _to_read(session: Session, app: Application) -> ApplicationRead:
         notes=app.notes,
         created_at=app.created_at,
         updated_at=app.updated_at,
-        posting=PostingRead.model_validate(posting, from_attributes=True),
+        posting=posting_read,
         events=[StatusEventRead.model_validate(e, from_attributes=True) for e in events],
     )
 
@@ -116,19 +122,73 @@ def update_application(
         raise HTTPException(status_code=404, detail="Application not found")
 
     fields = data.model_dump(exclude_unset=True)
-    status_changed = "status" in fields and fields["status"] != app.status
-
     for key, value in fields.items():
         setattr(app, key, value)
     app.updated_at = utcnow()
     session.add(app)
     session.commit()
     session.refresh(app)
+    return _to_read(session, app)
 
-    if status_changed:
-        session.add(StatusEvent(application_id=app.id, status=app.status))
-        session.commit()
 
+# ---- status event ABM (timeline editing) ----
+def _owned_app(session: Session, app_id: int, user: User) -> Application:
+    app = session.get(Application, app_id)
+    if not app or app.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return app
+
+
+@router.post("/{app_id}/events", response_model=ApplicationRead, status_code=201)
+def add_event(
+    app_id: int,
+    data: StatusEventCreate,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    session.add(StatusEvent(application_id=app.id, status=data.status,
+                            at=data.at or utcnow(), note=data.note))
+    if data.set_current:
+        app.status = data.status
+        app.updated_at = utcnow()
+        session.add(app)
+    session.commit()
+    return _to_read(session, app)
+
+
+@router.patch("/{app_id}/events/{event_id}", response_model=ApplicationRead)
+def update_event(
+    app_id: int,
+    event_id: int,
+    data: StatusEventUpdate,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    event = session.get(StatusEvent, event_id)
+    if not event or event.application_id != app.id:
+        raise HTTPException(status_code=404, detail="Event not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(event, key, value)
+    session.add(event)
+    session.commit()
+    return _to_read(session, app)
+
+
+@router.delete("/{app_id}/events/{event_id}", response_model=ApplicationRead)
+def delete_event(
+    app_id: int,
+    event_id: int,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    event = session.get(StatusEvent, event_id)
+    if not event or event.application_id != app.id:
+        raise HTTPException(status_code=404, detail="Event not found")
+    session.delete(event)
+    session.commit()
     return _to_read(session, app)
 
 

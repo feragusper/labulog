@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
-from ..crud import upsert_posting
+from ..crud import get_or_create_company, upsert_posting
 from ..db import get_session
 from ..deps import get_current_user
-from ..models import Application, JobPosting, User
-from ..schemas import PostingCreate, PostingLookup, PostingRead
+from ..models import Application, JobPosting, User, utcnow
+from ..schemas import PostingCreate, PostingLookup, PostingRead, PostingUpdate
 
 router = APIRouter(prefix="/api/postings", tags=["postings"])
 
@@ -53,4 +53,28 @@ def get_posting(
     posting = session.get(JobPosting, posting_id)
     if not posting:
         raise HTTPException(status_code=404, detail="Posting not found")
+    return posting
+
+
+@router.patch("/{posting_id}", response_model=PostingRead)
+def update_posting(
+    posting_id: int,
+    data: PostingUpdate,
+    session: Session = Depends(get_session),
+    _: User = Depends(get_current_user),
+):
+    posting = session.get(JobPosting, posting_id)
+    if not posting:
+        raise HTTPException(status_code=404, detail="Posting not found")
+
+    fields = data.model_dump(exclude_unset=True)
+    company_name = fields.pop("company_name", None)
+    if company_name:
+        posting.company_id = get_or_create_company(session, company_name).id
+    for key, value in fields.items():
+        setattr(posting, key, value)
+    posting.last_seen_at = utcnow()
+    session.add(posting)
+    session.commit()
+    session.refresh(posting)
     return posting

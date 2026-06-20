@@ -51,6 +51,7 @@ export interface Posting {
   url: string;
   title: string;
   company_id: number | null;
+  company_name: string | null;
   location: string | null;
   remote: string | null;
   seniority: string | null;
@@ -64,6 +65,7 @@ export interface Posting {
 }
 
 export interface StatusEvent {
+  id: number;
   status: AppStatus;
   at: string;
   note: string | null;
@@ -142,6 +144,18 @@ export const api = {
 
   deleteApplication: (id: number) =>
     request<void>(`/api/applications/${id}`, { method: "DELETE" }),
+
+  updatePosting: (id: number, payload: unknown) =>
+    request<Posting>(`/api/postings/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+
+  addEvent: (appId: number, payload: unknown) =>
+    request<Application>(`/api/applications/${appId}/events`, { method: "POST", body: JSON.stringify(payload) }),
+
+  updateEvent: (appId: number, eventId: number, payload: unknown) =>
+    request<Application>(`/api/applications/${appId}/events/${eventId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+
+  deleteEvent: (appId: number, eventId: number) =>
+    request<Application>(`/api/applications/${appId}/events/${eventId}`, { method: "DELETE" }),
 
   lookup: (url: string) =>
     request<Lookup>(`/api/postings/lookup?url=${encodeURIComponent(url)}`),

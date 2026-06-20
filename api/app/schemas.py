@@ -44,6 +44,7 @@ class PostingRead(BaseModel):
     url: str
     title: str
     company_id: Optional[int]
+    company_name: Optional[str] = None
     location: Optional[str]
     remote: Optional[str]
     seniority: Optional[str]
@@ -81,9 +82,38 @@ class ApplicationUpdate(BaseModel):
     resume_version: Optional[str] = None
     referral: Optional[str] = None
     notes: Optional[str] = None
+    applied_at: Optional[datetime] = None
+
+
+class PostingUpdate(BaseModel):
+    title: Optional[str] = None
+    company_name: Optional[str] = None
+    location: Optional[str] = None
+    remote: Optional[str] = None
+    seniority: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: Optional[str] = None
+    source: Optional[str] = None
+    description: Optional[str] = None
+    posted_at: Optional[datetime] = None
+
+
+class StatusEventCreate(BaseModel):
+    status: AppStatus
+    at: Optional[datetime] = None
+    note: Optional[str] = None
+    set_current: bool = False  # also set the application's current status
+
+
+class StatusEventUpdate(BaseModel):
+    status: Optional[AppStatus] = None
+    at: Optional[datetime] = None
+    note: Optional[str] = None
 
 
 class StatusEventRead(BaseModel):
+    id: int
     status: AppStatus
     at: datetime
     note: Optional[str]
