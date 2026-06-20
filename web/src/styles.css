@@ -175,7 +175,8 @@ th.sortable:hover { color: var(--text); }
 .stepper { display: flex; align-items: flex-start; gap: 0; }
 .step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
 .step:not(:last-child)::after {
-  content: ""; position: absolute; top: 13px; left: 50%; width: 100%; height: 2px;
+  content: ""; position: absolute; top: 13px; height: 2px;
+  left: calc(50% + 18px); right: calc(-50% + 18px);
   background: var(--border);
 }
 .step.done:not(:last-child)::after { background: var(--green); }

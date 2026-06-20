@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type AppStatus } from "../api";
-import { Badge, STATUSES } from "../components/ui";
+import { Badge, HOURS_PER_INTERVIEW, STATUSES } from "../components/ui";
 
 // Ordered hiring pipeline. Terminal outcomes are shown apart from the stepper.
 const PIPELINE: AppStatus[] = ["saved", "applied", "screening", "interview", "offer"];
@@ -9,6 +9,10 @@ const TERMINAL: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function daysBetween(a: number, b: number) {
+  return Math.max(0, Math.round((b - a) / 86_400_000));
 }
 
 export default function ApplicationDetail() {
@@ -49,6 +53,14 @@ export default function ApplicationDetail() {
   );
   const terminal = TERMINAL.includes(app.status) ? app.status : null;
   const p = app.posting;
+
+  // ---- tiempos ----
+  const eventTimes = app.events.map((e) => +new Date(e.at));
+  const startTs = app.applied_at ? +new Date(app.applied_at) : (eventTimes.length ? Math.min(...eventTimes) : null);
+  const lastTs = eventTimes.length ? Math.max(...eventTimes) : startTs;
+  const processDays = startTs && lastTs ? daysBetween(startTs, lastTs) : null;
+  const interviewRounds = app.events.filter((e) => e.status === "interview").length;
+  const interviewHours = interviewRounds * HOURS_PER_INTERVIEW;
 
   return (
     <div>
@@ -103,6 +115,20 @@ export default function ApplicationDetail() {
             Resultado final: <Badge status={terminal} />
           </div>
         )}
+      </div>
+
+      {/* ---- tiempos ---- */}
+      <div className="panel">
+        <h2>Tiempos</h2>
+        <div className="detail-meta">
+          <Meta label="Duración del proceso">
+            {processDays !== null ? `${processDays} día${processDays === 1 ? "" : "s"}` : "—"}
+          </Meta>
+          <Meta label="Rondas de entrevista">{interviewRounds}</Meta>
+          <Meta label="En entrevistas (est.)">
+            {interviewRounds ? `~${interviewHours} h` : "—"}
+          </Meta>
+        </div>
       </div>
 
       {/* ---- timeline ---- */}

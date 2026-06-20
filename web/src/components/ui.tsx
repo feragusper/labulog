@@ -11,3 +11,6 @@ export function Badge({ status }: { status: AppStatus }) {
 export function pct(n: number) {
   return `${Math.round(n * 100)}%`;
 }
+
+// No real interview durations are tracked; estimate total time from round count.
+export const HOURS_PER_INTERVIEW = 1;
