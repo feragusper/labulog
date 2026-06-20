@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage";
 import Overview from "./pages/Overview";
 import Applications from "./pages/Applications";
 import LookupPage from "./pages/Lookup";
+import Settings from "./pages/Settings";
 
 export default function App() {
   const meQuery = useQuery({
@@ -28,6 +29,7 @@ export default function App() {
         <Route index element={<Overview />} />
         <Route path="applications" element={<Applications />} />
         <Route path="lookup" element={<LookupPage />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

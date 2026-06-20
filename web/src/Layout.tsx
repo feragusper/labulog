@@ -5,6 +5,7 @@ const NAV = [
   { to: "/", label: "Resumen", end: true, icon: "▦" },
   { to: "/applications", label: "Postulaciones", icon: "▤" },
   { to: "/lookup", label: "¿Ya apliqué?", icon: "⌕" },
+  { to: "/settings", label: "Ajustes", icon: "⚙" },
 ];
 
 export default function Layout({ email }: { email?: string }) {

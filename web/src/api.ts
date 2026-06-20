@@ -145,4 +145,23 @@ export const api = {
     request<Lookup>(`/api/postings/lookup?url=${encodeURIComponent(url)}`),
 
   funnel: () => request<Funnel>("/api/stats/funnel"),
+
+  importCsv: async (file: File): Promise<ImportResult> => {
+    const form = new FormData();
+    form.append("file", file);
+    // No Content-Type header: the browser sets the multipart boundary.
+    const res = await fetch("/api/import/csv", {
+      method: "POST",
+      headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
+      body: form,
+    });
+    if (!res.ok) throw new ApiError(res.status, (await res.json()).detail ?? "Import failed");
+    return res.json();
+  },
 };
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
