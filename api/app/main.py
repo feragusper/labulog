@@ -49,6 +49,11 @@ if os.path.isdir(DIST_DIR):
 
     @app.get("/{full_path:path}")
     def spa(full_path: str):
-        # API routes already matched above; everything else -> index.html (client routing).
-        index = os.path.join(DIST_DIR, "index.html")
-        return FileResponse(index)
+        # Serve a real dist file if it exists (favicon.svg, robots.txt, ...);
+        # otherwise fall back to index.html for client-side routing.
+        base = os.path.abspath(DIST_DIR)
+        if full_path:
+            candidate = os.path.normpath(os.path.join(base, full_path))
+            if candidate.startswith(base) and os.path.isfile(candidate):
+                return FileResponse(candidate)
+        return FileResponse(os.path.join(base, "index.html"))
