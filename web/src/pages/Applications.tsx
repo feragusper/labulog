@@ -1,17 +1,65 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application } from "../api";
 import { STATUSES } from "../components/ui";
+
+const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+
+type SortKey = "company" | "status" | "salary" | "applied" | "activity";
+type SortDir = "asc" | "desc";
+
+function lastActivity(a: Application): number {
+  const dates = a.events.map((e) => +new Date(e.at));
+  return dates.length ? Math.max(...dates) : +new Date(a.updated_at);
+}
 
 export default function Applications() {
   const qc = useQueryClient();
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
 
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | AppStatus>("all");
+  const [hideClosed, setHideClosed] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("applied");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["applications"] });
     qc.invalidateQueries({ queryKey: ["funnel"] });
   };
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir(key === "company" ? "asc" : "desc"); }
+  };
+
+  const rows = useMemo(() => {
+    let list = apps.data ?? [];
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((a) => a.posting.title.toLowerCase().includes(q));
+    if (statusFilter !== "all") list = list.filter((a) => a.status === statusFilter);
+    if (hideClosed) list = list.filter((a) => !CLOSED.includes(a.status));
+
+    const dir = sortDir === "asc" ? 1 : -1;
+    const val = (a: Application): number | string => {
+      switch (sortKey) {
+        case "company": return a.posting.title.toLowerCase();
+        case "status": return STATUSES.indexOf(a.status);
+        case "salary": return a.posting.salary_min ?? -1;
+        case "applied": return a.applied_at ? +new Date(a.applied_at) : 0;
+        case "activity": return lastActivity(a);
+      }
+    };
+    return [...list].sort((a, b) => {
+      const va = val(a), vb = val(b);
+      if (va < vb) return -dir;
+      if (va > vb) return dir;
+      return 0;
+    });
+  }, [apps.data, search, statusFilter, hideClosed, sortKey, sortDir]);
+
+  const arrow = (key: SortKey) => sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
   return (
     <div>
@@ -19,21 +67,35 @@ export default function Applications() {
       <AddApplication onAdded={invalidate} />
 
       <div className="panel">
+        <div className="filters">
+          <input placeholder="Buscar empresa / rol…" value={search}
+            onChange={(e) => setSearch(e.target.value)} />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | AppStatus)}>
+            <option value="all">Todos los estados</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <label className="check">
+            <input type="checkbox" checked={hideClosed} onChange={(e) => setHideClosed(e.target.checked)} />
+            Ocultar cerradas
+          </label>
+          <span className="muted" style={{ fontSize: 13 }}>{rows.length} resultados</span>
+        </div>
+
         {apps.isLoading && <p className="muted">Cargando…</p>}
         {apps.data && apps.data.length === 0 && <p className="muted">Sin postulaciones todavía.</p>}
         {apps.data && apps.data.length > 0 && (
           <table>
             <thead>
               <tr>
-                <th>Empresa / Rol</th>
-                <th>Estado</th>
-                <th>Canal</th>
-                <th>Aplicada</th>
-                <th></th>
+                <th className="sortable" onClick={() => toggleSort("company")}>Empresa / Rol{arrow("company")}</th>
+                <th className="sortable" onClick={() => toggleSort("status")}>Estado{arrow("status")}</th>
+                <th className="sortable" onClick={() => toggleSort("salary")}>Salario{arrow("salary")}</th>
+                <th className="sortable" onClick={() => toggleSort("applied")}>Aplicada{arrow("applied")}</th>
+                <th className="sortable" onClick={() => toggleSort("activity")}>Últ. actividad{arrow("activity")}</th>
               </tr>
             </thead>
             <tbody>
-              {apps.data.map((a) => (
+              {rows.map((a) => (
                 <AppRow key={a.id} app={a} onChange={invalidate} />
               ))}
             </tbody>
@@ -44,23 +106,24 @@ export default function Applications() {
   );
 }
 
+function fmt(ts: number | string | null): string {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  return isNaN(+d) ? "—" : d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
 function AppRow({ app, onChange }: { app: Application; onChange: () => void }) {
   const update = useMutation({
     mutationFn: (status: AppStatus) => api.updateApplication(app.id, { status }),
     onSuccess: onChange,
   });
-  const del = useMutation({
-    mutationFn: () => api.deleteApplication(app.id),
-    onSuccess: onChange,
-  });
+  const p = app.posting;
 
   return (
     <tr>
       <td>
-        <div><Link to={`/applications/${app.id}`}>{app.posting.title}</Link></div>
-        <div className="muted" style={{ fontSize: 12 }}>
-          {app.posting.seniority ?? ""} {app.posting.source ? `· ${app.posting.source}` : ""}
-        </div>
+        <div><Link to={`/applications/${app.id}`}>{p.title}</Link></div>
+        {p.seniority && <div className="muted" style={{ fontSize: 12 }}>{p.seniority}</div>}
       </td>
       <td>
         <select
@@ -71,9 +134,9 @@ function AppRow({ app, onChange }: { app: Application; onChange: () => void }) {
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </td>
-      <td className="muted">{app.channel ?? "—"}</td>
-      <td className="muted">{app.applied_at ? app.applied_at.slice(0, 10) : "—"}</td>
-      <td><button className="danger" onClick={() => del.mutate()}>borrar</button></td>
+      <td className="muted">{p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}</td>
+      <td className="muted">{fmt(app.applied_at)}</td>
+      <td className="muted">{fmt(lastActivity(app))}</td>
     </tr>
   );
 }

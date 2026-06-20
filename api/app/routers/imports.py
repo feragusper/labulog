@@ -155,7 +155,7 @@ async def import_csv(
 
             app = Application(
                 user_id=current.id, posting_id=posting.id, status=final_status,
-                applied_at=applied_dt or utcnow(), channel="import",
+                applied_at=applied_dt or utcnow(), channel=None,
                 notes=result_text or None,
             )
             session.add(app)
