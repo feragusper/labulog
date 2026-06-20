@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { api, auth } from "./api";
+import Layout from "./Layout";
 import AuthPage from "./pages/AuthPage";
-import Dashboard from "./pages/Dashboard";
+import Overview from "./pages/Overview";
+import Applications from "./pages/Applications";
+import LookupPage from "./pages/Lookup";
 
 export default function App() {
   const meQuery = useQuery({
@@ -16,17 +20,16 @@ export default function App() {
     return <div className="container muted">Cargando…</div>;
   }
 
+  if (!loggedIn) return <AuthPage />;
+
   return (
-    <>
-      <div className="topbar">
-        <h1 className="brand">Labu<span>Log</span></h1>
-        {loggedIn && (
-          <button className="ghost" onClick={() => { auth.clear(); location.reload(); }}>
-            Salir ({meQuery.data?.email})
-          </button>
-        )}
-      </div>
-      {loggedIn ? <Dashboard /> : <AuthPage />}
-    </>
+    <Routes>
+      <Route element={<Layout email={meQuery.data?.email} />}>
+        <Route index element={<Overview />} />
+        <Route path="applications" element={<Applications />} />
+        <Route path="lookup" element={<LookupPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 }

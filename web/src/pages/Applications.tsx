@@ -1,22 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, ApiError, type AppStatus, type Application, type Lookup } from "../api";
+import { api, ApiError, type AppStatus, type Application } from "../api";
+import { STATUSES } from "../components/ui";
 
-const STATUSES: AppStatus[] = [
-  "saved", "applied", "screening", "interview", "offer", "rejected", "ghosted", "withdrawn",
-];
-
-function Badge({ status }: { status: AppStatus }) {
-  return <span className={`badge ${status}`}>{status}</span>;
-}
-
-function pct(n: number) {
-  return `${Math.round(n * 100)}%`;
-}
-
-export default function Dashboard() {
+export default function Applications() {
   const qc = useQueryClient();
-  const funnel = useQuery({ queryKey: ["funnel"], queryFn: api.funnel });
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
 
   const invalidate = () => {
@@ -25,22 +13,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container">
-      {/* ---- funnel cards ---- */}
-      <div className="grid cards">
-        <Card label="Postulaciones" value={funnel.data?.total ?? "—"} />
-        <Card label="Tasa respuesta" value={funnel.data ? pct(funnel.data.response_rate) : "—"} />
-        <Card label="Tasa entrevista" value={funnel.data ? pct(funnel.data.interview_rate) : "—"} />
-        <Card label="Ofertas" value={funnel.data?.by_status.offer ?? "—"} />
-        <Card label="Ghosteadas" value={funnel.data?.ghost_count ?? "—"} />
-      </div>
-
-      <LookupTool />
+    <div>
+      <h1 className="page-title">Postulaciones</h1>
       <AddApplication onAdded={invalidate} />
 
-      {/* ---- applications table ---- */}
       <div className="panel">
-        <h2>Mis postulaciones</h2>
         {apps.isLoading && <p className="muted">Cargando…</p>}
         {apps.data && apps.data.length === 0 && <p className="muted">Sin postulaciones todavía.</p>}
         {apps.data && apps.data.length > 0 && (
@@ -62,15 +39,6 @@ export default function Dashboard() {
           </table>
         )}
       </div>
-    </div>
-  );
-}
-
-function Card({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="card">
-      <div className="label">{label}</div>
-      <div className="value">{value}</div>
     </div>
   );
 }
@@ -106,45 +74,6 @@ function AppRow({ app, onChange }: { app: Application; onChange: () => void }) {
       <td className="muted">{app.applied_at ? app.applied_at.slice(0, 10) : "—"}</td>
       <td><button className="danger" onClick={() => del.mutate()}>borrar</button></td>
     </tr>
-  );
-}
-
-function LookupTool() {
-  const [url, setUrl] = useState("");
-  const [result, setResult] = useState<Lookup | null>(null);
-  const [error, setError] = useState("");
-
-  const check = useMutation({
-    mutationFn: () => api.lookup(url),
-    onSuccess: (data) => { setResult(data); setError(""); },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "Error"),
-  });
-
-  return (
-    <div className="panel">
-      <h2>¿Ya apliqué a este posting?</h2>
-      <div className="row">
-        <input placeholder="Pegá la URL del job posting"
-          value={url} onChange={(e) => setUrl(e.target.value)} />
-        <button className="shrink" disabled={!url || check.isPending} onClick={() => check.mutate()}>
-          Chequear
-        </button>
-      </div>
-      {error && <div className="error">{error}</div>}
-      {result && (
-        <div className="lookup-result">
-          {!result.posting ? (
-            <span className="muted">Posting desconocido — nadie lo registró todavía.</span>
-          ) : result.already_applied ? (
-            <span className="ok">
-              Ya aplicaste · estado: <Badge status={result.status!} />
-            </span>
-          ) : (
-            <span>Conozco el posting (<b>{result.posting.title}</b>) pero <b>vos no aplicaste</b>.</span>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
