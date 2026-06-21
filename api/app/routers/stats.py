@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 RESPONDED = {
     AppStatus.first_contact, AppStatus.screening, AppStatus.technical_interview,
     AppStatus.manager_interview, AppStatus.interview, AppStatus.proposal,
-    AppStatus.offer, AppStatus.rejected,
+    AppStatus.offer, AppStatus.rejected, AppStatus.cancelled,
 }
 INTERVIEWED = {
     AppStatus.technical_interview, AppStatus.manager_interview, AppStatus.interview,

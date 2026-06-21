@@ -20,6 +20,7 @@ class AppStatus(str, Enum):
     proposal = "proposal"
     offer = "offer"
     rejected = "rejected"
+    cancelled = "cancelled"  # process fell through externally (role closed, error)
     ghosted = "ghosted"
     withdrawn = "withdrawn"
 

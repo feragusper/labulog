@@ -5,7 +5,7 @@ import { api, ApiError, type AppStatus, type Application, type Priority } from "
 import { PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
 import { useI18n } from "../i18n";
 
-const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
 const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 type SortKey = "company" | "status" | "priority" | "salary" | "applied" | "activity" | "followup";

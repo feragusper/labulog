@@ -97,7 +97,7 @@ a { color: var(--accent); }
 .status-bar-fill.proposal, .status-bar-fill.offer { background: var(--green); }
 .status-bar-fill.screening, .status-bar-fill.interview,
 .status-bar-fill.technical_interview, .status-bar-fill.manager_interview { background: var(--yellow); }
-.status-bar-fill.rejected, .status-bar-fill.ghosted, .status-bar-fill.withdrawn { background: var(--red); }
+.status-bar-fill.rejected, .status-bar-fill.cancelled, .status-bar-fill.ghosted, .status-bar-fill.withdrawn { background: var(--red); }
 .status-bar-count { text-align: right; font-size: 13px; }
 
 @media (max-width: 720px) {
@@ -160,7 +160,7 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: upp
 .badge.applied, .badge.first_contact { color: var(--accent); }
 .badge.screening, .badge.interview, .badge.technical_interview, .badge.manager_interview { color: var(--yellow); }
 .badge.proposal, .badge.offer { color: var(--green); }
-.badge.rejected, .badge.ghosted, .badge.withdrawn { color: var(--red); }
+.badge.rejected, .badge.cancelled, .badge.ghosted, .badge.withdrawn { color: var(--red); }
 
 .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
 .row > * { flex: 1; min-width: 120px; }
@@ -282,7 +282,7 @@ th.sortable:hover { color: var(--text); }
 .timeline-dot.proposal, .timeline-dot.offer { background: var(--green); }
 .timeline-dot.screening, .timeline-dot.interview,
 .timeline-dot.technical_interview, .timeline-dot.manager_interview { background: var(--yellow); }
-.timeline-dot.rejected, .timeline-dot.ghosted, .timeline-dot.withdrawn { background: var(--red); }
+.timeline-dot.rejected, .timeline-dot.cancelled, .timeline-dot.ghosted, .timeline-dot.withdrawn { background: var(--red); }
 
 .lookup-result {
   margin-top: 12px; padding: 12px; border-radius: 8px;

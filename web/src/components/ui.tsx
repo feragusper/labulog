@@ -3,7 +3,8 @@ import { useI18n } from "../i18n";
 
 export const STATUSES: AppStatus[] = [
   "saved", "applied", "first_contact", "screening", "technical_interview",
-  "manager_interview", "interview", "proposal", "offer", "rejected", "ghosted", "withdrawn",
+  "manager_interview", "interview", "proposal", "offer",
+  "rejected", "cancelled", "ghosted", "withdrawn",
 ];
 
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];

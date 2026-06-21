@@ -4,7 +4,7 @@ import { api, type AppStatus, type Application } from "../api";
 import { Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, pct } from "../components/ui";
 import { useI18n } from "../i18n";
 
-const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
 
 // Real pipeline stages beyond "applied" (excludes terminal outcomes, which the
 // importer adds as an inferred event and would otherwise count as progress).

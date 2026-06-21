@@ -9,7 +9,7 @@ const PIPELINE: AppStatus[] = [
   "saved", "applied", "first_contact", "screening",
   "technical_interview", "manager_interview", "proposal", "offer",
 ];
-const TERMINAL: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+const TERMINAL: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
 
 // Legacy/generic "interview" ranks alongside the technical-interview step.
 function rankOf(s: AppStatus): number {

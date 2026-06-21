@@ -45,7 +45,7 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
 export type AppStatus =
   | "saved" | "applied" | "first_contact" | "screening"
   | "technical_interview" | "manager_interview" | "interview"
-  | "proposal" | "offer" | "rejected" | "ghosted" | "withdrawn";
+  | "proposal" | "offer" | "rejected" | "cancelled" | "ghosted" | "withdrawn";
 
 export type Priority = "high" | "medium" | "low";
 

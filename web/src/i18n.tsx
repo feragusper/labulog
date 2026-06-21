@@ -149,6 +149,7 @@ const ES: Dict = {
   "st.proposal": "Propuesta",
   "st.offer": "Oferta",
   "st.rejected": "Rechazada",
+  "st.cancelled": "Cancelada",
   "st.ghosted": "Ghosteada",
   "st.withdrawn": "Retirada",
 };
@@ -290,6 +291,7 @@ const EN: Dict = {
   "st.proposal": "Proposal",
   "st.offer": "Offer",
   "st.rejected": "Rejected",
+  "st.cancelled": "Cancelled",
   "st.ghosted": "Ghosted",
   "st.withdrawn": "Withdrawn",
 };
