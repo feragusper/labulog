@@ -19,6 +19,7 @@ class AppStatus(str, Enum):
     interview = "interview"  # legacy / generic round
     proposal = "proposal"
     offer = "offer"
+    accepted = "accepted"  # you accepted the offer / signed
     rejected = "rejected"
     cancelled = "cancelled"  # process fell through externally (role closed, error)
     ghosted = "ghosted"

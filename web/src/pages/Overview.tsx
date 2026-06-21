@@ -52,7 +52,7 @@ export default function Overview() {
         <Card label={t("overview.applications")} value={f?.total ?? "—"} />
         <Card label={t("overview.responseRate")} value={f ? pct(f.response_rate) : "—"} />
         <Card label={t("overview.interviewRate")} value={f ? pct(f.interview_rate) : "—"} />
-        <Card label={t("overview.offers")} value={f?.by_status.offer ?? "—"} />
+        <Card label={t("overview.offers")} value={f ? f.by_status.offer + f.by_status.accepted : "—"} />
         <Card label={t("overview.ghosted")} value={f?.ghost_count ?? "—"} />
       </div>
 

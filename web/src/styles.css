@@ -94,7 +94,7 @@ a { color: var(--accent); }
 .status-bar-row { display: grid; grid-template-columns: 110px 1fr 32px; align-items: center; gap: 12px; }
 .status-bar-track { background: var(--panel-2); border-radius: 6px; height: 10px; overflow: hidden; }
 .status-bar-fill { height: 100%; background: var(--accent); border-radius: 6px; }
-.status-bar-fill.proposal, .status-bar-fill.offer { background: var(--green); }
+.status-bar-fill.proposal, .status-bar-fill.offer, .status-bar-fill.accepted { background: var(--green); }
 .status-bar-fill.screening, .status-bar-fill.interview,
 .status-bar-fill.technical_interview, .status-bar-fill.manager_interview { background: var(--yellow); }
 .status-bar-fill.rejected, .status-bar-fill.cancelled, .status-bar-fill.ghosted, .status-bar-fill.withdrawn { background: var(--red); }
@@ -159,7 +159,7 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: upp
 .badge.saved { color: var(--muted); }
 .badge.applied, .badge.first_contact { color: var(--accent); }
 .badge.screening, .badge.interview, .badge.technical_interview, .badge.manager_interview { color: var(--yellow); }
-.badge.proposal, .badge.offer { color: var(--green); }
+.badge.proposal, .badge.offer, .badge.accepted { color: var(--green); }
 .badge.rejected, .badge.cancelled, .badge.ghosted, .badge.withdrawn { color: var(--red); }
 
 .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
@@ -233,6 +233,15 @@ td.due { color: var(--red); }
 th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 th.sortable:hover { color: var(--text); }
 
+/* status colour bar on application rows */
+.statusrow td:first-child { box-shadow: inset 4px 0 0 var(--border); }
+.statusrow.c-muted  td:first-child { box-shadow: inset 4px 0 0 var(--muted); }
+.statusrow.c-accent td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+.statusrow.c-yellow td:first-child { box-shadow: inset 4px 0 0 var(--yellow); }
+.statusrow.c-green  td:first-child { box-shadow: inset 4px 0 0 var(--green); }
+.statusrow.c-red    td:first-child { box-shadow: inset 4px 0 0 var(--red); }
+.statusrow td:first-child { padding-left: 14px; }
+
 /* ---- application detail ---- */
 .detail-meta {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -279,7 +288,7 @@ th.sortable:hover { color: var(--text); }
   width: 12px; height: 12px; border-radius: 999px; margin-top: 3px; flex-shrink: 0;
   background: var(--accent); z-index: 1;
 }
-.timeline-dot.proposal, .timeline-dot.offer { background: var(--green); }
+.timeline-dot.proposal, .timeline-dot.offer, .timeline-dot.accepted { background: var(--green); }
 .timeline-dot.screening, .timeline-dot.interview,
 .timeline-dot.technical_interview, .timeline-dot.manager_interview { background: var(--yellow); }
 .timeline-dot.rejected, .timeline-dot.cancelled, .timeline-dot.ghosted, .timeline-dot.withdrawn { background: var(--red); }

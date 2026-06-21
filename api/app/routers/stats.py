@@ -12,12 +12,14 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 RESPONDED = {
     AppStatus.first_contact, AppStatus.screening, AppStatus.technical_interview,
     AppStatus.manager_interview, AppStatus.interview, AppStatus.proposal,
-    AppStatus.offer, AppStatus.rejected, AppStatus.cancelled,
+    AppStatus.offer, AppStatus.accepted, AppStatus.rejected, AppStatus.cancelled,
 }
 INTERVIEWED = {
     AppStatus.technical_interview, AppStatus.manager_interview, AppStatus.interview,
-    AppStatus.proposal, AppStatus.offer,
+    AppStatus.proposal, AppStatus.offer, AppStatus.accepted,
 }
+# An offer existed if you reached offer or accepted it.
+OFFERED = {AppStatus.offer, AppStatus.accepted}
 
 
 @router.get("/funnel", response_model=FunnelStats)
@@ -45,6 +47,6 @@ def funnel(
         by_status=by_status,
         response_rate=rate(RESPONDED),
         interview_rate=rate(INTERVIEWED),
-        offer_rate=rate({AppStatus.offer}),
+        offer_rate=rate(OFFERED),
         ghost_count=by_status[AppStatus.ghosted.value],
     )

@@ -3,9 +3,18 @@ import { useI18n } from "../i18n";
 
 export const STATUSES: AppStatus[] = [
   "saved", "applied", "first_contact", "screening", "technical_interview",
-  "manager_interview", "interview", "proposal", "offer",
+  "manager_interview", "interview", "proposal", "offer", "accepted",
   "rejected", "cancelled", "ghosted", "withdrawn",
 ];
+
+// Maps a status to a colour-group class (left bar on rows, etc.).
+export function statusColorClass(s: AppStatus): string {
+  if (s === "saved") return "c-muted";
+  if (s === "applied" || s === "first_contact") return "c-accent";
+  if (["screening", "technical_interview", "manager_interview", "interview"].includes(s)) return "c-yellow";
+  if (["proposal", "offer", "accepted"].includes(s)) return "c-green";
+  return "c-red"; // rejected, cancelled, ghosted, withdrawn
+}
 
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];
 

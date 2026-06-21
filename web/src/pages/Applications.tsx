@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
-import { PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
+import { PriorityBadge, PRIORITIES, STATUSES, statusColorClass, statusLabel } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
@@ -157,7 +157,7 @@ function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) 
   const { t } = useI18n();
   const p = app.posting;
   return (
-    <tr>
+    <tr className={`statusrow ${statusColorClass(app.status)}`}>
       <td>
         <div><Link to={`/applications/${app.id}`}>{p.company_name ?? p.title}</Link></div>
         <div className="muted" style={{ fontSize: 12 }}>{p.company_name ? p.title : (p.seniority ?? "")}</div>
