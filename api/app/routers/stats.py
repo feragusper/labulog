@@ -9,8 +9,15 @@ from ..schemas import FunnelStats
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 # Statuses that count as "the company responded / moved me forward".
-RESPONDED = {AppStatus.screening, AppStatus.interview, AppStatus.offer, AppStatus.rejected}
-INTERVIEWED = {AppStatus.interview, AppStatus.offer}
+RESPONDED = {
+    AppStatus.first_contact, AppStatus.screening, AppStatus.technical_interview,
+    AppStatus.manager_interview, AppStatus.interview, AppStatus.proposal,
+    AppStatus.offer, AppStatus.rejected,
+}
+INTERVIEWED = {
+    AppStatus.technical_interview, AppStatus.manager_interview, AppStatus.interview,
+    AppStatus.proposal, AppStatus.offer,
+}
 
 
 @router.get("/funnel", response_model=FunnelStats)

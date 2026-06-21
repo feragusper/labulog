@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
-import { PriorityBadge, PRIORITIES, STATUSES } from "../components/ui";
+import { PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
@@ -108,7 +108,7 @@ export default function Applications() {
           {view === "list" && (
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | AppStatus)}>
               <option value="all">{t("apps.allStatuses")}</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
             </select>
           )}
           <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as "all" | Priority)}>
@@ -154,6 +154,7 @@ export default function Applications() {
 }
 
 function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) => void }) {
+  const { t } = useI18n();
   const p = app.posting;
   return (
     <tr>
@@ -163,7 +164,7 @@ function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) 
       </td>
       <td>
         <select value={app.status} onChange={(e) => onStatus(e.target.value as AppStatus)} style={{ width: "auto" }}>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
         </select>
       </td>
       <td>{app.priority ? <PriorityBadge priority={app.priority} /> : <span className="muted">—</span>}</td>
@@ -179,6 +180,7 @@ function Board({ apps, hideClosed, onDrop }: {
   hideClosed: boolean;
   onDrop: (id: number, status: AppStatus) => void;
 }) {
+  const { t } = useI18n();
   const cols = hideClosed ? STATUSES.filter((s) => !CLOSED.includes(s)) : STATUSES;
   const [dragId, setDragId] = useState<number | null>(null);
   const [over, setOver] = useState<AppStatus | null>(null);
@@ -196,7 +198,7 @@ function Board({ apps, hideClosed, onDrop }: {
             onDrop={() => { if (dragId != null) onDrop(dragId, col); setDragId(null); setOver(null); }}
           >
             <div className="board-col-head">
-              <span className={`badge ${col}`}>{col}</span>
+              <span className={`badge ${col}`}>{statusLabel(t, col)}</span>
               <span className="muted" style={{ fontSize: 12 }}>{items.length}</span>
             </div>
             {items.map((a) => (
@@ -276,7 +278,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div>
           <label>{t("form.initialStatus")}</label>
           <select value={f.status} onChange={set("status")}>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
           </select>
         </div>
         <div>

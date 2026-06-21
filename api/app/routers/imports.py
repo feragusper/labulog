@@ -18,13 +18,13 @@ router = APIRouter(prefix="/api/import", tags=["import"])
 # CSV stage column -> the status that reaching it implies.
 STAGE_COLUMNS = [
     ("Apply", AppStatus.applied),
-    ("First Contact", AppStatus.screening),
+    ("First Contact", AppStatus.first_contact),
     ("Screening", AppStatus.screening),
-    ("Manager I", AppStatus.interview),
-    ("Technical I", AppStatus.interview),
-    ("Technical II", AppStatus.interview),
-    ("Manager II", AppStatus.interview),
-    ("Proposal", AppStatus.offer),
+    ("Technical I", AppStatus.technical_interview),
+    ("Technical II", AppStatus.technical_interview),
+    ("Manager I", AppStatus.manager_interview),
+    ("Manager II", AppStatus.manager_interview),
+    ("Proposal", AppStatus.proposal),
 ]
 
 SKIP_TOKENS = {"", "-", "waiting", "?", "`", "n/a"}

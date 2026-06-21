@@ -94,8 +94,9 @@ a { color: var(--accent); }
 .status-bar-row { display: grid; grid-template-columns: 110px 1fr 32px; align-items: center; gap: 12px; }
 .status-bar-track { background: var(--panel-2); border-radius: 6px; height: 10px; overflow: hidden; }
 .status-bar-fill { height: 100%; background: var(--accent); border-radius: 6px; }
-.status-bar-fill.offer { background: var(--green); }
-.status-bar-fill.screening, .status-bar-fill.interview { background: var(--yellow); }
+.status-bar-fill.proposal, .status-bar-fill.offer { background: var(--green); }
+.status-bar-fill.screening, .status-bar-fill.interview,
+.status-bar-fill.technical_interview, .status-bar-fill.manager_interview { background: var(--yellow); }
 .status-bar-fill.rejected, .status-bar-fill.ghosted, .status-bar-fill.withdrawn { background: var(--red); }
 .status-bar-count { text-align: right; font-size: 13px; }
 
@@ -156,9 +157,9 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: upp
   border: 1px solid var(--border);
 }
 .badge.saved { color: var(--muted); }
-.badge.applied { color: var(--accent); }
-.badge.screening, .badge.interview { color: var(--yellow); }
-.badge.offer { color: var(--green); }
+.badge.applied, .badge.first_contact { color: var(--accent); }
+.badge.screening, .badge.interview, .badge.technical_interview, .badge.manager_interview { color: var(--yellow); }
+.badge.proposal, .badge.offer { color: var(--green); }
 .badge.rejected, .badge.ghosted, .badge.withdrawn { color: var(--red); }
 
 .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
@@ -278,8 +279,9 @@ th.sortable:hover { color: var(--text); }
   width: 12px; height: 12px; border-radius: 999px; margin-top: 3px; flex-shrink: 0;
   background: var(--accent); z-index: 1;
 }
-.timeline-dot.offer { background: var(--green); }
-.timeline-dot.screening, .timeline-dot.interview { background: var(--yellow); }
+.timeline-dot.proposal, .timeline-dot.offer { background: var(--green); }
+.timeline-dot.screening, .timeline-dot.interview,
+.timeline-dot.technical_interview, .timeline-dot.manager_interview { background: var(--yellow); }
 .timeline-dot.rejected, .timeline-dot.ghosted, .timeline-dot.withdrawn { background: var(--red); }
 
 .lookup-result {

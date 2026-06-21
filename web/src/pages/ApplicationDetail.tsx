@@ -2,11 +2,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
-import { Badge, HOURS_PER_INTERVIEW, PriorityBadge, PRIORITIES, STATUSES } from "../components/ui";
+import { Badge, HOURS_PER_INTERVIEW, PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
 import { useI18n } from "../i18n";
 
-const PIPELINE: AppStatus[] = ["saved", "applied", "screening", "interview", "offer"];
+const PIPELINE: AppStatus[] = [
+  "saved", "applied", "first_contact", "screening",
+  "technical_interview", "manager_interview", "proposal", "offer",
+];
 const TERMINAL: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+
+// Legacy/generic "interview" ranks alongside the technical-interview step.
+function rankOf(s: AppStatus): number {
+  if (s === "interview") return PIPELINE.indexOf("technical_interview");
+  return PIPELINE.indexOf(s);
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
@@ -54,10 +63,7 @@ export default function ApplicationDetail() {
 
   const app = q.data;
   const reachedSet = new Set<AppStatus>([app.status, ...app.events.map((e) => e.status)]);
-  const reachedIdx = Math.max(
-    ...PIPELINE.map((s, i) => (reachedSet.has(s) ? i : -1)),
-    PIPELINE.indexOf(app.status),
-  );
+  const reachedIdx = Math.max(-1, ...[...reachedSet].map(rankOf));
   const terminal = TERMINAL.includes(app.status) ? app.status : null;
   const p = app.posting;
 
@@ -114,7 +120,7 @@ export default function ApplicationDetail() {
             return (
               <div key={s} className={`step${done ? " done" : ""}`}>
                 <div className="step-dot">{done ? "✓" : ""}</div>
-                <div className="step-label">{s}</div>
+                <div className="step-label">{statusLabel(t, s)}</div>
               </div>
             );
           })}
@@ -205,7 +211,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
         <div>
           <label>{t("detail.statusCurrent")}</label>
           <select value={f.status} onChange={set("status")}>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
           </select>
         </div>
         <div>
@@ -312,7 +318,7 @@ function EventForm({
         <div className="shrink">
           <label>{t("detail.eventStatus")}</label>
           <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} style={{ width: "auto" }}>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
           </select>
         </div>
         <div className="shrink">

@@ -2,13 +2,19 @@ import type { AppStatus, Priority } from "../api";
 import { useI18n } from "../i18n";
 
 export const STATUSES: AppStatus[] = [
-  "saved", "applied", "screening", "interview", "offer", "rejected", "ghosted", "withdrawn",
+  "saved", "applied", "first_contact", "screening", "technical_interview",
+  "manager_interview", "interview", "proposal", "offer", "rejected", "ghosted", "withdrawn",
 ];
 
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
+export function statusLabel(t: (k: string) => string, status: AppStatus): string {
+  return t(`st.${status}`);
+}
+
 export function Badge({ status }: { status: AppStatus }) {
-  return <span className={`badge ${status}`}>{status}</span>;
+  const { t } = useI18n();
+  return <span className={`badge ${status}`}>{statusLabel(t, status)}</span>;
 }
 
 export function PriorityBadge({ priority }: { priority: Priority }) {

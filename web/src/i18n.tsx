@@ -138,6 +138,19 @@ const ES: Dict = {
   "pri.high": "Alta",
   "pri.medium": "Media",
   "pri.low": "Baja",
+
+  "st.saved": "Guardada",
+  "st.applied": "Aplicada",
+  "st.first_contact": "Primer contacto",
+  "st.screening": "Screening",
+  "st.technical_interview": "Entrev. técnica",
+  "st.manager_interview": "Entrev. manager",
+  "st.interview": "Entrevista",
+  "st.proposal": "Propuesta",
+  "st.offer": "Oferta",
+  "st.rejected": "Rechazada",
+  "st.ghosted": "Ghosteada",
+  "st.withdrawn": "Retirada",
 };
 
 const EN: Dict = {
@@ -266,6 +279,19 @@ const EN: Dict = {
   "pri.high": "High",
   "pri.medium": "Medium",
   "pri.low": "Low",
+
+  "st.saved": "Saved",
+  "st.applied": "Applied",
+  "st.first_contact": "First contact",
+  "st.screening": "Screening",
+  "st.technical_interview": "Technical interview",
+  "st.manager_interview": "Manager interview",
+  "st.interview": "Interview",
+  "st.proposal": "Proposal",
+  "st.offer": "Offer",
+  "st.rejected": "Rejected",
+  "st.ghosted": "Ghosted",
+  "st.withdrawn": "Withdrawn",
 };
 
 const DICTS: Record<Lang, Dict> = { es: ES, en: EN };

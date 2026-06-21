@@ -12,8 +12,12 @@ def utcnow() -> datetime:
 class AppStatus(str, Enum):
     saved = "saved"
     applied = "applied"
+    first_contact = "first_contact"
     screening = "screening"
-    interview = "interview"
+    technical_interview = "technical_interview"
+    manager_interview = "manager_interview"
+    interview = "interview"  # legacy / generic round
+    proposal = "proposal"
     offer = "offer"
     rejected = "rejected"
     ghosted = "ghosted"
