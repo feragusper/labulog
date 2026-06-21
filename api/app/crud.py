@@ -17,8 +17,11 @@ def get_or_create_company(session: Session, name: str) -> Company:
 
 
 def upsert_posting(session: Session, data: PostingCreate) -> JobPosting:
-    """Find posting by unique url, or create it. Updates last_seen_at on hit."""
-    posting = session.exec(select(JobPosting).where(JobPosting.url == data.url)).first()
+    """Find posting by unique url (when present), or create it. Postings without a
+    url are never deduped — each becomes its own row."""
+    posting = None
+    if data.url:
+        posting = session.exec(select(JobPosting).where(JobPosting.url == data.url)).first()
     company = get_or_create_company(session, data.company_name)
 
     if posting:

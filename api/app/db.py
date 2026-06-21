@@ -47,6 +47,7 @@ def init_db() -> None:
                 if name not in existing:
                     conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {name} {sqltype}'))
     _ensure_enum_values()
+    _ensure_nullable()
 
 
 def _ensure_enum_values() -> None:
@@ -65,6 +66,27 @@ def _ensure_enum_values() -> None:
             return
         for member in AppStatus:
             conn.execute(text(f"ALTER TYPE appstatus ADD VALUE IF NOT EXISTS '{member.value}'"))
+
+
+# Columns that became nullable after first deploy (Postgres only; dev sqlite is
+# recreated from the models). Idempotent: DROP NOT NULL is a no-op if already null.
+_ENSURE_NULLABLE = {"jobposting": ["url"]}
+
+
+def _ensure_nullable() -> None:
+    if engine.dialect.name != "postgresql":
+        return
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    with engine.begin() as conn:
+        for table, cols in _ENSURE_NULLABLE.items():
+            if table not in tables:
+                continue
+            current = {c["name"]: c for c in inspector.get_columns(table)}
+            for name in cols:
+                col = current.get(name)
+                if col is not None and not col.get("nullable", True):
+                    conn.execute(text(f'ALTER TABLE "{table}" ALTER COLUMN {name} DROP NOT NULL'))
 
 
 def get_session():

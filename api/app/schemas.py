@@ -25,7 +25,7 @@ class Token(BaseModel):
 
 # ---- postings ----
 class PostingCreate(BaseModel):
-    url: str
+    url: Optional[str] = None
     title: str
     company_name: str
     location: Optional[str] = None
@@ -41,7 +41,7 @@ class PostingCreate(BaseModel):
 
 class PostingRead(BaseModel):
     id: int
-    url: str
+    url: Optional[str]
     title: str
     company_id: Optional[int]
     company_name: Optional[str] = None
@@ -55,6 +55,22 @@ class PostingRead(BaseModel):
     posted_at: Optional[datetime]
     first_seen_at: datetime
     is_ghost: bool
+
+
+class ScrapeRequest(BaseModel):
+    url: str
+
+
+class ScrapeResult(BaseModel):
+    """Best-effort fields parsed from a posting URL; any may be None."""
+    title: Optional[str] = None
+    company_name: Optional[str] = None
+    location: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: Optional[str] = None
+    source: Optional[str] = None
+    description: Optional[str] = None
 
 
 class PostingLookup(BaseModel):

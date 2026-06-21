@@ -234,11 +234,28 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   });
   const [error, setError] = useState("");
 
+  const autofill = useMutation({
+    mutationFn: () => api.scrape(f.url),
+    onSuccess: (r) => {
+      setF((prev) => ({
+        ...prev,
+        title: prev.title || r.title || "",
+        company_name: prev.company_name || r.company_name || "",
+        salary_min: prev.salary_min || (r.salary_min != null ? String(r.salary_min) : ""),
+        salary_max: prev.salary_max || (r.salary_max != null ? String(r.salary_max) : ""),
+        currency: r.currency || prev.currency,
+        source: r.source || prev.source,
+      }));
+      setError("");
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : t("form.scrapeFail")),
+  });
+
   const create = useMutation({
     mutationFn: () =>
       api.createApplication({
         posting: {
-          url: f.url, title: f.title, company_name: f.company_name,
+          url: f.url || null, title: f.title, company_name: f.company_name,
           seniority: f.seniority || null, source: f.source || null,
           salary_min: f.salary_min ? Number(f.salary_min) : null,
           salary_max: f.salary_max ? Number(f.salary_max) : null,
@@ -266,8 +283,17 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   return (
     <div className="panel">
       <h2>{t("form.new")}</h2>
+      <div style={{ marginBottom: 12 }}>
+        <label>{t("form.url")}</label>
+        <div className="row">
+          <input value={f.url} onChange={set("url")} placeholder="https://…" />
+          <button className="shrink ghost" disabled={!f.url || autofill.isPending}
+            onClick={() => autofill.mutate()}>
+            {autofill.isPending ? t("form.autofilling") : `✨ ${t("form.autofill")}`}
+          </button>
+        </div>
+      </div>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div><label>{t("form.url")}</label><input value={f.url} onChange={set("url")} /></div>
         <div><label>{t("form.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("form.seniority")}</label><input value={f.seniority} onChange={set("seniority")} placeholder="junior / senior…" /></div>
@@ -296,7 +322,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       </div>
       {error && <div className="error">{error}</div>}
       <div className="row" style={{ marginTop: 14 }}>
-        <button className="shrink" disabled={!f.url || !f.title || !f.company_name || create.isPending}
+        <button className="shrink" disabled={!f.title || !f.company_name || create.isPending}
           onClick={() => create.mutate()}>{t("common.save")}</button>
         <button className="shrink ghost" onClick={() => { setOpen(false); setError(""); }}>{t("common.cancel")}</button>
       </div>

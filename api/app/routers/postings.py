@@ -5,9 +5,28 @@ from ..crud import get_or_create_company, upsert_posting
 from ..db import get_session
 from ..deps import get_current_user
 from ..models import Application, JobPosting, User, utcnow
-from ..schemas import PostingCreate, PostingLookup, PostingRead, PostingUpdate
+from ..schemas import (
+    PostingCreate, PostingLookup, PostingRead, PostingUpdate, ScrapeRequest, ScrapeResult,
+)
 
 router = APIRouter(prefix="/api/postings", tags=["postings"])
+
+
+@router.post("/scrape", response_model=ScrapeResult)
+def scrape(
+    data: ScrapeRequest,
+    _: User = Depends(get_current_user),
+):
+    """Best-effort autofill: fetch the URL and parse posting metadata."""
+    from ..scrape import is_safe_url, scrape_posting
+
+    if not is_safe_url(data.url):
+        raise HTTPException(status_code=400, detail="URL inválida o no permitida")
+    try:
+        return scrape_posting(data.url)
+    except Exception:
+        # Many boards block bots or need auth; degrade to manual entry.
+        raise HTTPException(status_code=502, detail="No se pudo leer el posting")
 
 
 @router.post("", response_model=PostingRead, status_code=201)

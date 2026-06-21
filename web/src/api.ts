@@ -150,6 +150,9 @@ export const api = {
   deleteApplication: (id: number) =>
     request<void>(`/api/applications/${id}`, { method: "DELETE" }),
 
+  scrape: (url: string) =>
+    request<ScrapeResult>("/api/postings/scrape", { method: "POST", body: JSON.stringify({ url }) }),
+
   updatePosting: (id: number, payload: unknown) =>
     request<Posting>(`/api/postings/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
 
@@ -199,4 +202,15 @@ export interface ImportResult {
   imported: number;
   skipped: number;
   errors: string[];
+}
+
+export interface ScrapeResult {
+  title: string | null;
+  company_name: string | null;
+  location: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  currency: string | null;
+  source: string | null;
+  description: string | null;
 }

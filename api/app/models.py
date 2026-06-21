@@ -59,7 +59,7 @@ class JobPosting(SQLModel, table=True):
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None
-    url: str = Field(index=True, unique=True)
+    url: Optional[str] = Field(default=None, index=True, unique=True)
     source: Optional[str] = None  # linkedin | indeed | manual | ...
     description: Optional[str] = None
     posted_at: Optional[datetime] = None
