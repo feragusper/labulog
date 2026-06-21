@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, type Application, type AppStatus } from "../api";
-import { Badge, HOURS_PER_INTERVIEW, STATUSES } from "../components/ui";
+import { api, type Application, type AppStatus, type Priority } from "../api";
+import { Badge, HOURS_PER_INTERVIEW, PriorityBadge, PRIORITIES, STATUSES } from "../components/ui";
 
 const PIPELINE: AppStatus[] = ["saved", "applied", "screening", "interview", "offer"];
 const TERMINAL: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
@@ -80,7 +80,9 @@ export default function ApplicationDetail() {
             <div className="detail-meta">
               <Meta label="Empresa">{p.company_name ?? "—"}</Meta>
               <Meta label="Estado"><Badge status={app.status} /></Meta>
+              <Meta label="Prioridad">{app.priority ? <PriorityBadge priority={app.priority} /> : "—"}</Meta>
               <Meta label="Aplicada">{app.applied_at ? fmtDate(app.applied_at) : "—"}</Meta>
+              <Meta label="Follow-up">{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
               <Meta label="Seniority">{p.seniority ?? "—"}</Meta>
               <Meta label="Fuente">{p.source ?? "—"}</Meta>
               <Meta label="Salario">
@@ -161,6 +163,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
     source: p.source ?? "", salary_min: p.salary_min?.toString() ?? "",
     salary_max: p.salary_max?.toString() ?? "", currency: p.currency ?? "",
     status: app.status, applied_at: toDateInput(app.applied_at), notes: app.notes ?? "",
+    priority: (app.priority ?? "") as "" | Priority, follow_up_date: toDateInput(app.follow_up_date),
   });
   const [error, setError] = useState("");
 
@@ -174,6 +177,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
       });
       await api.updateApplication(app.id, {
         status: f.status, notes: f.notes || null, applied_at: fromDateInput(f.applied_at),
+        priority: f.priority || null, follow_up_date: fromDateInput(f.follow_up_date),
       });
     },
     onSuccess: onDone,
@@ -201,6 +205,14 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
+        <div>
+          <label>Prioridad</label>
+          <select value={f.priority} onChange={set("priority")}>
+            <option value="">—</option>
+            {PRIORITIES.map((pr) => <option key={pr} value={pr}>{pr}</option>)}
+          </select>
+        </div>
+        <div><label>Follow-up</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
       </div>
       <div style={{ marginTop: 10 }}>
         <label>Notas</label>

@@ -151,6 +151,37 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: upp
 }
 .divider span { padding: 0 10px; }
 
+/* ---- priority + due ---- */
+.pri { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid; }
+.pri-high { color: var(--red); border-color: var(--red); }
+.pri-medium { color: var(--yellow); border-color: var(--yellow); }
+.pri-low { color: var(--muted); border-color: var(--border); }
+.due { color: var(--red); font-weight: 500; }
+.due-list { list-style: none; margin: 0; padding: 0; }
+.due-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.due-list li > a { flex: 1; }
+
+/* ---- view toggle ---- */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { background: var(--panel); color: var(--muted); border: none; border-radius: 0; padding: 7px 14px; font-size: 13px; }
+.seg button.active { background: var(--panel-2); color: var(--text); }
+
+/* ---- kanban board ---- */
+.board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.board-col {
+  flex: 0 0 200px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; min-height: 120px; transition: border-color .12s, background .12s;
+}
+.board-col.over { border-color: var(--accent); background: var(--panel-2); }
+.board-col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.board-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 10px; margin-bottom: 8px; cursor: grab;
+}
+.board-card:active { cursor: grabbing; }
+.board-card-foot { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
+td.due { color: var(--red); }
+
 /* ---- filters + sortable headers ---- */
 .filters {
   display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;

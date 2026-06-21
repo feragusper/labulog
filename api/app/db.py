@@ -1,3 +1,4 @@
+from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from .config import settings
@@ -21,9 +22,30 @@ connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else 
 engine = create_engine(db_url, echo=False, connect_args=connect_args)
 
 
+# Additive columns introduced after the first deploy. create_all() only creates
+# missing tables, not missing columns, so we add them idempotently here. (Both
+# Postgres and SQLite support plain ALTER TABLE ADD COLUMN.) Swap for Alembic
+# once migrations get non-trivial.
+_ENSURE_COLUMNS = {
+    "application": [
+        ("priority", "VARCHAR"),
+        ("follow_up_date", "TIMESTAMP"),
+    ],
+}
+
+
 def init_db() -> None:
-    # MVP: create tables directly. Swap for Alembic migrations before prod.
     SQLModel.metadata.create_all(engine)
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    for table, cols in _ENSURE_COLUMNS.items():
+        if table not in tables:
+            continue
+        existing = {c["name"] for c in inspector.get_columns(table)}
+        with engine.begin() as conn:
+            for name, sqltype in cols:
+                if name not in existing:
+                    conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {name} {sqltype}'))
 
 
 def get_session():

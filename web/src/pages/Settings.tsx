@@ -69,6 +69,15 @@ export default function Settings() {
       </div>
 
       <div className="panel">
+        <h2>Exportar</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Descargá todas tus postulaciones en CSV (empresa, rol, estado, prioridad,
+          fechas, salario, follow-up, notas).
+        </p>
+        <button onClick={() => api.exportCsv()}>Exportar CSV</button>
+      </div>
+
+      <div className="panel">
         <h2>¿Otro formato?</h2>
         <p className="muted" style={{ margin: 0 }}>
           Hoy soporta el CSV de scouting. Si tenés Excel (.xlsx) u otra estructura,

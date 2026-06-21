@@ -20,6 +20,12 @@ class AppStatus(str, Enum):
     withdrawn = "withdrawn"
 
 
+class Priority(str, Enum):
+    high = "high"
+    medium = "medium"
+    low = "low"
+
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(index=True, unique=True)
@@ -62,6 +68,8 @@ class Application(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     posting_id: int = Field(foreign_key="jobposting.id", index=True)
     status: AppStatus = Field(default=AppStatus.applied)
+    priority: Optional[Priority] = None
+    follow_up_date: Optional[datetime] = None  # next action / reminder date
     applied_at: Optional[datetime] = Field(default_factory=utcnow)
     channel: Optional[str] = None  # linkedin-easy-apply | email | referral | portal
     resume_version: Optional[str] = None

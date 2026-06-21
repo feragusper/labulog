@@ -1,6 +1,9 @@
+import csv
+import io
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from ..crud import upsert_posting
@@ -34,6 +37,8 @@ def _to_read(session: Session, app: Application) -> ApplicationRead:
     return ApplicationRead(
         id=app.id,
         status=app.status,
+        priority=app.priority,
+        follow_up_date=app.follow_up_date,
         applied_at=app.applied_at,
         channel=app.channel,
         resume_version=app.resume_version,
@@ -57,6 +62,42 @@ def list_applications(
         .order_by(Application.created_at.desc())
     ).all()
     return [_to_read(session, a) for a in apps]
+
+
+@router.get("/export.csv")
+def export_csv(
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    apps = session.exec(
+        select(Application)
+        .where(Application.user_id == current.id)
+        .order_by(Application.created_at.desc())
+    ).all()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["company", "title", "status", "priority", "applied_at",
+                "follow_up_date", "salary_min", "salary_max", "currency",
+                "source", "url", "notes"])
+    for a in apps:
+        p = session.get(JobPosting, a.posting_id)
+        company = session.get(Company, p.company_id).name if p and p.company_id else ""
+        w.writerow([
+            company, p.title if p else "", a.status.value,
+            a.priority.value if a.priority else "",
+            a.applied_at.date().isoformat() if a.applied_at else "",
+            a.follow_up_date.date().isoformat() if a.follow_up_date else "",
+            p.salary_min if p else "", p.salary_max if p else "",
+            p.currency if p else "", p.source if p else "",
+            p.url if p else "", (a.notes or "").replace("\n", " "),
+        ])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=labulog-export.csv"},
+    )
 
 
 @router.post("", response_model=ApplicationRead, status_code=201)
@@ -83,6 +124,8 @@ def create_application(
         user_id=current.id,
         posting_id=posting.id,
         status=data.status,
+        priority=data.priority,
+        follow_up_date=data.follow_up_date,
         applied_at=data.applied_at or utcnow(),
         channel=data.channel,
         resume_version=data.resume_version,

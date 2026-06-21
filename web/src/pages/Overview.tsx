@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
 import { Badge, HOURS_PER_INTERVIEW, pct } from "../components/ui";
+
+const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
 
 function processDays(a: Application): number | null {
   const ts = a.events.map((e) => +new Date(e.at));
@@ -23,6 +26,11 @@ export default function Overview() {
   const avgProcess = durations.length
     ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length) : null;
 
+  const now = new Date();
+  const due = list
+    .filter((a) => a.follow_up_date && !CLOSED.includes(a.status) && new Date(a.follow_up_date) <= now)
+    .sort((a, b) => +new Date(a.follow_up_date!) - +new Date(b.follow_up_date!));
+
   return (
     <div>
       <h1 className="page-title">Resumen</h1>
@@ -39,7 +47,23 @@ export default function Overview() {
         <Card label="Rondas de entrevista" value={apps.isLoading ? "—" : interviewRounds} />
         <Card label="En entrevistas (est.)" value={apps.isLoading ? "—" : `~${interviewHours} h`} />
         <Card label="Duración media proceso" value={avgProcess !== null ? `${avgProcess} d` : "—"} />
+        <Card label="Follow-ups vencidos" value={apps.isLoading ? "—" : due.length} />
       </div>
+
+      {due.length > 0 && (
+        <div className="panel">
+          <h2>Follow-ups vencidos</h2>
+          <ul className="due-list">
+            {due.map((a) => (
+              <li key={a.id}>
+                <Link to={`/applications/${a.id}`}>{a.posting.company_name ?? a.posting.title}</Link>
+                <span className="due">{new Date(a.follow_up_date!).toLocaleDateString("es-AR", { day: "2-digit", month: "short" })}</span>
+                <Badge status={a.status} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="panel">
         <h2>Por estado</h2>

@@ -1,25 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, ApiError, type AppStatus, type Application } from "../api";
-import { STATUSES } from "../components/ui";
+import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
+import { PriorityBadge, PRIORITIES, STATUSES } from "../components/ui";
 
 const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
-type SortKey = "company" | "status" | "salary" | "applied" | "activity";
+type SortKey = "company" | "status" | "priority" | "salary" | "applied" | "activity" | "followup";
 type SortDir = "asc" | "desc";
 
 function lastActivity(a: Application): number {
   const dates = a.events.map((e) => +new Date(e.at));
   return dates.length ? Math.max(...dates) : +new Date(a.updated_at);
 }
+function isClosed(a: Application) {
+  return CLOSED.includes(a.status);
+}
+function isDue(a: Application) {
+  return !!a.follow_up_date && !isClosed(a) && new Date(a.follow_up_date) <= new Date();
+}
+function fmt(ts: number | string | null): string {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  return isNaN(+d) ? "—" : d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "2-digit" });
+}
 
 export default function Applications() {
   const qc = useQueryClient();
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
 
+  const [view, setView] = useState<"list" | "board">("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | AppStatus>("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | Priority>("all");
   const [hideClosed, setHideClosed] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("applied");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -28,27 +42,40 @@ export default function Applications() {
     qc.invalidateQueries({ queryKey: ["applications"] });
     qc.invalidateQueries({ queryKey: ["funnel"] });
   };
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: AppStatus }) =>
+      api.updateApplication(id, { status }),
+    onSuccess: invalidate,
+  });
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir(key === "company" ? "asc" : "desc"); }
   };
 
-  const rows = useMemo(() => {
+  const filtered = useMemo(() => {
     let list = apps.data ?? [];
     const q = search.trim().toLowerCase();
-    if (q) list = list.filter((a) => a.posting.title.toLowerCase().includes(q));
-    if (statusFilter !== "all") list = list.filter((a) => a.status === statusFilter);
-    if (hideClosed) list = list.filter((a) => !CLOSED.includes(a.status));
+    if (q) list = list.filter((a) =>
+      a.posting.title.toLowerCase().includes(q) ||
+      (a.posting.company_name ?? "").toLowerCase().includes(q));
+    if (priorityFilter !== "all") list = list.filter((a) => a.priority === priorityFilter);
+    if (hideClosed) list = list.filter((a) => !isClosed(a));
+    return list;
+  }, [apps.data, search, priorityFilter, hideClosed]);
 
+  const rows = useMemo(() => {
+    let list = statusFilter !== "all" ? filtered.filter((a) => a.status === statusFilter) : filtered;
     const dir = sortDir === "asc" ? 1 : -1;
     const val = (a: Application): number | string => {
       switch (sortKey) {
-        case "company": return a.posting.title.toLowerCase();
+        case "company": return (a.posting.company_name ?? a.posting.title).toLowerCase();
         case "status": return STATUSES.indexOf(a.status);
+        case "priority": return a.priority ? PRIORITY_ORDER[a.priority] : 99;
         case "salary": return a.posting.salary_min ?? -1;
         case "applied": return a.applied_at ? +new Date(a.applied_at) : 0;
         case "activity": return lastActivity(a);
+        case "followup": return a.follow_up_date ? +new Date(a.follow_up_date) : Infinity;
       }
     };
     return [...list].sort((a, b) => {
@@ -57,87 +84,139 @@ export default function Applications() {
       if (va > vb) return dir;
       return 0;
     });
-  }, [apps.data, search, statusFilter, hideClosed, sortKey, sortDir]);
+  }, [filtered, statusFilter, sortKey, sortDir]);
 
   const arrow = (key: SortKey) => sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
   return (
     <div>
-      <h1 className="page-title">Postulaciones</h1>
+      <div className="row" style={{ alignItems: "center" }}>
+        <h1 className="page-title" style={{ flex: 1, margin: 0 }}>Postulaciones</h1>
+        <div className="seg">
+          <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>Lista</button>
+          <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}>Tablero</button>
+        </div>
+      </div>
+
       <AddApplication onAdded={invalidate} />
 
       <div className="panel">
         <div className="filters">
-          <input placeholder="Buscar empresa / rol…" value={search}
-            onChange={(e) => setSearch(e.target.value)} />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | AppStatus)}>
-            <option value="all">Todos los estados</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          <input placeholder="Buscar empresa / rol…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {view === "list" && (
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | AppStatus)}>
+              <option value="all">Todos los estados</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
+          <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as "all" | Priority)}>
+            <option value="all">Toda prioridad</option>
+            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
           <label className="check">
             <input type="checkbox" checked={hideClosed} onChange={(e) => setHideClosed(e.target.checked)} />
             Ocultar cerradas
           </label>
-          <span className="muted" style={{ fontSize: 13 }}>{rows.length} resultados</span>
+          <span className="muted" style={{ fontSize: 13 }}>{filtered.length} resultados</span>
         </div>
 
         {apps.isLoading && <p className="muted">Cargando…</p>}
         {apps.data && apps.data.length === 0 && <p className="muted">Sin postulaciones todavía.</p>}
-        {apps.data && apps.data.length > 0 && (
+
+        {apps.data && apps.data.length > 0 && view === "list" && (
           <table>
             <thead>
               <tr>
                 <th className="sortable" onClick={() => toggleSort("company")}>Empresa / Rol{arrow("company")}</th>
                 <th className="sortable" onClick={() => toggleSort("status")}>Estado{arrow("status")}</th>
+                <th className="sortable" onClick={() => toggleSort("priority")}>Prioridad{arrow("priority")}</th>
                 <th className="sortable" onClick={() => toggleSort("salary")}>Salario{arrow("salary")}</th>
                 <th className="sortable" onClick={() => toggleSort("applied")}>Aplicada{arrow("applied")}</th>
-                <th className="sortable" onClick={() => toggleSort("activity")}>Últ. actividad{arrow("activity")}</th>
+                <th className="sortable" onClick={() => toggleSort("followup")}>Follow-up{arrow("followup")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((a) => (
-                <AppRow key={a.id} app={a} onChange={invalidate} />
+                <AppRow key={a.id} app={a} onStatus={(s) => setStatus.mutate({ id: a.id, status: s })} />
               ))}
             </tbody>
           </table>
+        )}
+
+        {apps.data && apps.data.length > 0 && view === "board" && (
+          <Board apps={filtered} hideClosed={hideClosed} onDrop={(id, status) => setStatus.mutate({ id, status })} />
         )}
       </div>
     </div>
   );
 }
 
-function fmt(ts: number | string | null): string {
-  if (!ts) return "—";
-  const d = new Date(ts);
-  return isNaN(+d) ? "—" : d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "2-digit" });
-}
-
-function AppRow({ app, onChange }: { app: Application; onChange: () => void }) {
-  const update = useMutation({
-    mutationFn: (status: AppStatus) => api.updateApplication(app.id, { status }),
-    onSuccess: onChange,
-  });
+function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) => void }) {
   const p = app.posting;
-
   return (
     <tr>
       <td>
-        <div><Link to={`/applications/${app.id}`}>{p.title}</Link></div>
-        {p.seniority && <div className="muted" style={{ fontSize: 12 }}>{p.seniority}</div>}
+        <div><Link to={`/applications/${app.id}`}>{p.company_name ?? p.title}</Link></div>
+        <div className="muted" style={{ fontSize: 12 }}>{p.company_name ? p.title : (p.seniority ?? "")}</div>
       </td>
       <td>
-        <select
-          value={app.status}
-          onChange={(e) => update.mutate(e.target.value as AppStatus)}
-          style={{ width: "auto" }}
-        >
+        <select value={app.status} onChange={(e) => onStatus(e.target.value as AppStatus)} style={{ width: "auto" }}>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </td>
+      <td>{app.priority ? <PriorityBadge priority={app.priority} /> : <span className="muted">—</span>}</td>
       <td className="muted">{p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}</td>
       <td className="muted">{fmt(app.applied_at)}</td>
-      <td className="muted">{fmt(lastActivity(app))}</td>
+      <td className={isDue(app) ? "due" : "muted"}>{app.follow_up_date ? fmt(app.follow_up_date) : "—"}</td>
     </tr>
+  );
+}
+
+function Board({ apps, hideClosed, onDrop }: {
+  apps: Application[];
+  hideClosed: boolean;
+  onDrop: (id: number, status: AppStatus) => void;
+}) {
+  const cols = hideClosed ? STATUSES.filter((s) => !CLOSED.includes(s)) : STATUSES;
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [over, setOver] = useState<AppStatus | null>(null);
+
+  return (
+    <div className="board">
+      {cols.map((col) => {
+        const items = apps.filter((a) => a.status === col);
+        return (
+          <div
+            key={col}
+            className={`board-col${over === col ? " over" : ""}`}
+            onDragOver={(e) => { e.preventDefault(); setOver(col); }}
+            onDragLeave={() => setOver((o) => (o === col ? null : o))}
+            onDrop={() => { if (dragId != null) onDrop(dragId, col); setDragId(null); setOver(null); }}
+          >
+            <div className="board-col-head">
+              <span className={`badge ${col}`}>{col}</span>
+              <span className="muted" style={{ fontSize: 12 }}>{items.length}</span>
+            </div>
+            {items.map((a) => (
+              <div
+                key={a.id}
+                className="board-card"
+                draggable
+                onDragStart={() => setDragId(a.id)}
+                onDragEnd={() => { setDragId(null); setOver(null); }}
+              >
+                <Link to={`/applications/${a.id}`}>{a.posting.company_name ?? a.posting.title}</Link>
+                {a.posting.company_name && <div className="muted" style={{ fontSize: 11 }}>{a.posting.title}</div>}
+                <div className="board-card-foot">
+                  {a.priority && <PriorityBadge priority={a.priority} />}
+                  {a.follow_up_date && <span className={isDue(a) ? "due" : "muted"} style={{ fontSize: 11 }}>⏰ {fmt(a.follow_up_date)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -145,8 +224,8 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
     url: "", title: "", company_name: "", seniority: "", source: "linkedin",
-    salary_min: "", salary_max: "", currency: "USD", channel: "", notes: "",
-    status: "applied" as AppStatus,
+    salary_min: "", salary_max: "", currency: "USD", notes: "",
+    status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
   });
   const [error, setError] = useState("");
 
@@ -160,11 +239,13 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
           salary_max: f.salary_max ? Number(f.salary_max) : null,
           currency: f.currency || null,
         },
-        status: f.status, channel: f.channel || null, notes: f.notes || null,
+        status: f.status, notes: f.notes || null,
+        priority: f.priority || null,
+        follow_up_date: f.follow_up_date ? `${f.follow_up_date}T00:00:00` : null,
       }),
     onSuccess: () => {
       setOpen(false); setError("");
-      setF({ ...f, url: "", title: "", company_name: "", notes: "", channel: "" });
+      setF({ ...f, url: "", title: "", company_name: "", notes: "", follow_up_date: "" });
       onAdded();
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : "Error"),
@@ -174,11 +255,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
     setF({ ...f, [k]: e.target.value });
 
   if (!open) {
-    return (
-      <div className="panel">
-        <button onClick={() => setOpen(true)}>+ Nueva postulación</button>
-      </div>
-    );
+    return <div className="panel"><button onClick={() => setOpen(true)}>+ Nueva postulación</button></div>;
   }
 
   return (
@@ -192,14 +269,21 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div><label>Salario min</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>Salario max</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
         <div><label>Fuente</label><input value={f.source} onChange={set("source")} /></div>
-        <div><label>Canal</label><input value={f.channel} onChange={set("channel")} placeholder="easy-apply / email / referido" /></div>
+        <div><label>Moneda</label><input value={f.currency} onChange={set("currency")} /></div>
         <div>
           <label>Estado inicial</label>
           <select value={f.status} onChange={set("status")}>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        <div><label>Moneda</label><input value={f.currency} onChange={set("currency")} /></div>
+        <div>
+          <label>Prioridad</label>
+          <select value={f.priority} onChange={set("priority")}>
+            <option value="">—</option>
+            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div><label>Follow-up</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
       </div>
       <div style={{ marginTop: 10 }}>
         <label>Notas</label>

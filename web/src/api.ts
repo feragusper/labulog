@@ -46,6 +46,8 @@ export type AppStatus =
   | "saved" | "applied" | "screening" | "interview"
   | "offer" | "rejected" | "ghosted" | "withdrawn";
 
+export type Priority = "high" | "medium" | "low";
+
 export interface Posting {
   id: number;
   url: string;
@@ -74,6 +76,8 @@ export interface StatusEvent {
 export interface Application {
   id: number;
   status: AppStatus;
+  priority: Priority | null;
+  follow_up_date: string | null;
   applied_at: string | null;
   channel: string | null;
   resume_version: string | null;
@@ -161,6 +165,20 @@ export const api = {
     request<Lookup>(`/api/postings/lookup?url=${encodeURIComponent(url)}`),
 
   funnel: () => request<Funnel>("/api/stats/funnel"),
+
+  exportCsv: async (): Promise<void> => {
+    const res = await fetch("/api/applications/export.csv", {
+      headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
+    });
+    if (!res.ok) throw new ApiError(res.status, "Export failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "labulog-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 
   importCsv: async (file: File): Promise<ImportResult> => {
     const form = new FormData();

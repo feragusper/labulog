@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
-from .models import AppStatus
+from .models import AppStatus, Priority
 
 
 # ---- auth ----
@@ -69,6 +69,8 @@ class PostingLookup(BaseModel):
 class ApplicationCreate(BaseModel):
     posting: PostingCreate
     status: AppStatus = AppStatus.applied
+    priority: Optional[Priority] = None
+    follow_up_date: Optional[datetime] = None
     channel: Optional[str] = None
     resume_version: Optional[str] = None
     referral: Optional[str] = None
@@ -78,6 +80,8 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationUpdate(BaseModel):
     status: Optional[AppStatus] = None
+    priority: Optional[Priority] = None
+    follow_up_date: Optional[datetime] = None
     channel: Optional[str] = None
     resume_version: Optional[str] = None
     referral: Optional[str] = None
@@ -122,6 +126,8 @@ class StatusEventRead(BaseModel):
 class ApplicationRead(BaseModel):
     id: int
     status: AppStatus
+    priority: Optional[Priority]
+    follow_up_date: Optional[datetime]
     applied_at: Optional[datetime]
     channel: Optional[str]
     resume_version: Optional[str]
