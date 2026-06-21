@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
-import { Badge, HOURS_PER_INTERVIEW, PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
+import { Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const PIPELINE: AppStatus[] = [
@@ -71,7 +71,7 @@ export default function ApplicationDetail() {
   const startTs = app.applied_at ? +new Date(app.applied_at) : (eventTimes.length ? Math.min(...eventTimes) : null);
   const lastTs = eventTimes.length ? Math.max(...eventTimes) : startTs;
   const processDays = startTs && lastTs ? daysBetween(startTs, lastTs) : null;
-  const interviewRounds = app.events.filter((e) => e.status === "interview").length;
+  const interviewRounds = app.events.filter((e) => INTERVIEW_STATUSES.includes(e.status)).length;
   const interviewHours = interviewRounds * HOURS_PER_INTERVIEW;
 
   return (

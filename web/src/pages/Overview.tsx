@@ -1,10 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
-import { Badge, HOURS_PER_INTERVIEW, pct } from "../components/ui";
+import { Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, pct } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
+
+// Real pipeline stages beyond "applied" (excludes terminal outcomes, which the
+// importer adds as an inferred event and would otherwise count as progress).
+const PROGRESS_STAGES: AppStatus[] = [
+  "first_contact", "screening", "technical_interview",
+  "manager_interview", "interview", "proposal", "offer",
+];
+function progressed(a: Application): boolean {
+  return a.events.some((e) => PROGRESS_STAGES.includes(e.status));
+}
 
 function processDays(a: Application): number | null {
   const ts = a.events.map((e) => +new Date(e.at));
@@ -22,9 +32,10 @@ export default function Overview() {
 
   const list = apps.data ?? [];
   const interviewRounds = list.reduce(
-    (n, a) => n + a.events.filter((e) => e.status === "interview").length, 0);
+    (n, a) => n + a.events.filter((e) => INTERVIEW_STATUSES.includes(e.status)).length, 0);
   const interviewHours = interviewRounds * HOURS_PER_INTERVIEW;
-  const durations = list.map(processDays).filter((d): d is number => d !== null);
+  // Average only over processes that actually moved (ignore the apply-and-die ones).
+  const durations = list.filter(progressed).map(processDays).filter((d): d is number => d !== null);
   const avgProcess = durations.length
     ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length) : null;
 

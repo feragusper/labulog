@@ -8,6 +8,11 @@ export const STATUSES: AppStatus[] = [
 
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
+// Every status that represents an interview round (legacy + granular).
+export const INTERVIEW_STATUSES: AppStatus[] = [
+  "interview", "technical_interview", "manager_interview",
+];
+
 export function statusLabel(t: (k: string) => string, status: AppStatus): string {
   return t(`st.${status}`);
 }
