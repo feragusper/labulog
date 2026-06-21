@@ -1,0 +1,292 @@
+import { createContext, useContext, useState, type ReactNode } from "react";
+
+export type Lang = "es" | "en";
+
+const KEY = "labulog_lang";
+
+function detect(): Lang {
+  const stored = localStorage.getItem(KEY) as Lang | null;
+  if (stored) return stored;
+  return navigator.language.toLowerCase().startsWith("es") ? "es" : "en";
+}
+
+type Dict = Record<string, string>;
+
+const ES: Dict = {
+  "nav.overview": "Resumen",
+  "nav.applications": "Postulaciones",
+  "nav.lookup": "¿Ya apliqué?",
+  "nav.settings": "Ajustes",
+  "nav.logout": "Salir",
+  "nav.collapse": "Colapsar",
+  "nav.expand": "Expandir",
+
+  "common.cancel": "Cancelar",
+  "common.save": "Guardar",
+  "common.loading": "Cargando…",
+  "common.results": "resultados",
+  "common.back": "Postulaciones",
+
+  "overview.title": "Resumen",
+  "overview.applications": "Postulaciones",
+  "overview.responseRate": "Tasa respuesta",
+  "overview.interviewRate": "Tasa entrevista",
+  "overview.offers": "Ofertas",
+  "overview.ghosted": "Ghosteadas",
+  "overview.interviewRounds": "Rondas de entrevista",
+  "overview.interviewHours": "En entrevistas (est.)",
+  "overview.avgProcess": "Duración media proceso",
+  "overview.dueFollowups": "Follow-ups vencidos",
+  "overview.byStatus": "Por estado",
+  "overview.emptyFunnel": "Cargá postulaciones para ver el embudo.",
+
+  "apps.title": "Postulaciones",
+  "apps.list": "Lista",
+  "apps.board": "Tablero",
+  "apps.new": "+ Nueva postulación",
+  "apps.search": "Buscar empresa / rol…",
+  "apps.allStatuses": "Todos los estados",
+  "apps.allPriorities": "Toda prioridad",
+  "apps.hideClosed": "Ocultar cerradas",
+  "apps.empty": "Sin postulaciones todavía.",
+  "apps.colCompany": "Empresa / Rol",
+  "apps.colStatus": "Estado",
+  "apps.colPriority": "Prioridad",
+  "apps.colSalary": "Salario",
+  "apps.colApplied": "Aplicada",
+  "apps.colFollowup": "Follow-up",
+
+  "form.new": "Nueva postulación",
+  "form.url": "URL del posting *",
+  "form.company": "Empresa *",
+  "form.role": "Rol / título *",
+  "form.seniority": "Seniority",
+  "form.salaryMin": "Salario min",
+  "form.salaryMax": "Salario max",
+  "form.source": "Fuente",
+  "form.currency": "Moneda",
+  "form.initialStatus": "Estado inicial",
+  "form.priority": "Prioridad",
+  "form.followup": "Follow-up",
+  "form.notes": "Notas",
+
+  "detail.editData": "Editar datos",
+  "detail.editTitle": "Editar datos",
+  "detail.delete": "Borrar",
+  "detail.confirmDelete": "¿Borrar esta postulación?",
+  "detail.company": "Empresa",
+  "detail.status": "Estado",
+  "detail.statusCurrent": "Estado actual",
+  "detail.priority": "Prioridad",
+  "detail.applied": "Aplicada",
+  "detail.followup": "Follow-up",
+  "detail.seniority": "Seniority",
+  "detail.source": "Fuente",
+  "detail.salary": "Salario",
+  "detail.viewPosting": "Ver posting ↗",
+  "detail.stages": "Etapas alcanzadas",
+  "detail.finalResult": "Resultado final:",
+  "detail.times": "Tiempos",
+  "detail.processDuration": "Duración del proceso",
+  "detail.interviewRounds": "Rondas de entrevista",
+  "detail.interviewEst": "En entrevistas (est.)",
+  "detail.timeline": "Timeline",
+  "detail.event": "+ Evento",
+  "detail.noEvents": "Sin eventos.",
+  "detail.notes": "Notas",
+  "detail.eventStatus": "Estado",
+  "detail.eventDate": "Fecha",
+  "detail.eventNote": "Nota",
+  "detail.setCurrent": "Marcar como estado actual",
+  "detail.editLink": "editar",
+  "detail.deleteLink": "borrar",
+  "detail.notFound": "No se encontró la postulación.",
+  "detail.saveError": "No se pudo guardar",
+  "detail.role": "Rol / título",
+
+  "lookup.title": "¿Ya apliqué a este posting?",
+  "lookup.desc": "Pegá la URL de un job posting y cruzo contra tus postulaciones — anti ghost-job.",
+  "lookup.placeholder": "https://linkedin.com/jobs/view/…",
+  "lookup.check": "Chequear",
+  "lookup.unknown": "Posting desconocido — nadie lo registró todavía.",
+  "lookup.statusLabel": "Ya aplicaste · estado:",
+
+  "settings.title": "Ajustes",
+  "settings.appearance": "Apariencia",
+  "settings.theme": "Tema",
+  "settings.system": "Sistema",
+  "settings.light": "Claro",
+  "settings.dark": "Oscuro",
+  "settings.language": "Idioma",
+  "settings.export": "Exportar",
+  "settings.exportDesc": "Descargá todas tus postulaciones en CSV (empresa, rol, estado, prioridad, fechas, salario, follow-up, notas).",
+  "settings.exportBtn": "Exportar CSV",
+
+  "auth.login": "Entrar",
+  "auth.register": "Crear cuenta",
+  "auth.email": "Email",
+  "auth.password": "Contraseña",
+  "auth.enter": "Entrar",
+  "auth.signup": "Registrarme",
+  "auth.noAccount": "¿No tenés cuenta? ",
+  "auth.haveAccount": "¿Ya tenés cuenta? ",
+  "auth.goRegister": "Registrate",
+  "auth.goLogin": "Entrá",
+  "auth.or": "o",
+  "auth.fail": "Algo falló",
+
+  "pri.high": "Alta",
+  "pri.medium": "Media",
+  "pri.low": "Baja",
+};
+
+const EN: Dict = {
+  "nav.overview": "Overview",
+  "nav.applications": "Applications",
+  "nav.lookup": "Already applied?",
+  "nav.settings": "Settings",
+  "nav.logout": "Sign out",
+  "nav.collapse": "Collapse",
+  "nav.expand": "Expand",
+
+  "common.cancel": "Cancel",
+  "common.save": "Save",
+  "common.loading": "Loading…",
+  "common.results": "results",
+  "common.back": "Applications",
+
+  "overview.title": "Overview",
+  "overview.applications": "Applications",
+  "overview.responseRate": "Response rate",
+  "overview.interviewRate": "Interview rate",
+  "overview.offers": "Offers",
+  "overview.ghosted": "Ghosted",
+  "overview.interviewRounds": "Interview rounds",
+  "overview.interviewHours": "In interviews (est.)",
+  "overview.avgProcess": "Avg. process length",
+  "overview.dueFollowups": "Overdue follow-ups",
+  "overview.byStatus": "By status",
+  "overview.emptyFunnel": "Add applications to see the funnel.",
+
+  "apps.title": "Applications",
+  "apps.list": "List",
+  "apps.board": "Board",
+  "apps.new": "+ New application",
+  "apps.search": "Search company / role…",
+  "apps.allStatuses": "All statuses",
+  "apps.allPriorities": "Any priority",
+  "apps.hideClosed": "Hide closed",
+  "apps.empty": "No applications yet.",
+  "apps.colCompany": "Company / Role",
+  "apps.colStatus": "Status",
+  "apps.colPriority": "Priority",
+  "apps.colSalary": "Salary",
+  "apps.colApplied": "Applied",
+  "apps.colFollowup": "Follow-up",
+
+  "form.new": "New application",
+  "form.url": "Posting URL *",
+  "form.company": "Company *",
+  "form.role": "Role / title *",
+  "form.seniority": "Seniority",
+  "form.salaryMin": "Salary min",
+  "form.salaryMax": "Salary max",
+  "form.source": "Source",
+  "form.currency": "Currency",
+  "form.initialStatus": "Initial status",
+  "form.priority": "Priority",
+  "form.followup": "Follow-up",
+  "form.notes": "Notes",
+
+  "detail.editData": "Edit data",
+  "detail.editTitle": "Edit data",
+  "detail.delete": "Delete",
+  "detail.confirmDelete": "Delete this application?",
+  "detail.company": "Company",
+  "detail.status": "Status",
+  "detail.statusCurrent": "Current status",
+  "detail.priority": "Priority",
+  "detail.applied": "Applied",
+  "detail.followup": "Follow-up",
+  "detail.seniority": "Seniority",
+  "detail.source": "Source",
+  "detail.salary": "Salary",
+  "detail.viewPosting": "View posting ↗",
+  "detail.stages": "Stages reached",
+  "detail.finalResult": "Final result:",
+  "detail.times": "Times",
+  "detail.processDuration": "Process duration",
+  "detail.interviewRounds": "Interview rounds",
+  "detail.interviewEst": "In interviews (est.)",
+  "detail.timeline": "Timeline",
+  "detail.event": "+ Event",
+  "detail.noEvents": "No events.",
+  "detail.notes": "Notes",
+  "detail.eventStatus": "Status",
+  "detail.eventDate": "Date",
+  "detail.eventNote": "Note",
+  "detail.setCurrent": "Set as current status",
+  "detail.editLink": "edit",
+  "detail.deleteLink": "delete",
+  "detail.notFound": "Application not found.",
+  "detail.saveError": "Could not save",
+  "detail.role": "Role / title",
+
+  "lookup.title": "Already applied to this posting?",
+  "lookup.desc": "Paste a job posting URL and I cross-check it against your applications — anti ghost-job.",
+  "lookup.placeholder": "https://linkedin.com/jobs/view/…",
+  "lookup.check": "Check",
+  "lookup.unknown": "Unknown posting — nobody logged it yet.",
+  "lookup.statusLabel": "Already applied · status:",
+
+  "settings.title": "Settings",
+  "settings.appearance": "Appearance",
+  "settings.theme": "Theme",
+  "settings.system": "System",
+  "settings.light": "Light",
+  "settings.dark": "Dark",
+  "settings.language": "Language",
+  "settings.export": "Export",
+  "settings.exportDesc": "Download all your applications as CSV (company, role, status, priority, dates, salary, follow-up, notes).",
+  "settings.exportBtn": "Export CSV",
+
+  "auth.login": "Sign in",
+  "auth.register": "Create account",
+  "auth.email": "Email",
+  "auth.password": "Password",
+  "auth.enter": "Sign in",
+  "auth.signup": "Sign up",
+  "auth.noAccount": "No account? ",
+  "auth.haveAccount": "Already have an account? ",
+  "auth.goRegister": "Sign up",
+  "auth.goLogin": "Sign in",
+  "auth.or": "or",
+  "auth.fail": "Something failed",
+
+  "pri.high": "High",
+  "pri.medium": "Medium",
+  "pri.low": "Low",
+};
+
+const DICTS: Record<Lang, Dict> = { es: ES, en: EN };
+
+interface I18nCtx {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: string) => string;
+}
+
+const Ctx = createContext<I18nCtx | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(detect());
+  const setLang = (l: Lang) => { localStorage.setItem(KEY, l); setLangState(l); };
+  const t = (key: string) => DICTS[lang][key] ?? key;
+  return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
+}
+
+export function useI18n(): I18nCtx {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useI18n outside provider");
+  return ctx;
+}

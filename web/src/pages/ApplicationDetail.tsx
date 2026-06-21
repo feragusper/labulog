@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import { Badge, HOURS_PER_INTERVIEW, PriorityBadge, PRIORITIES, STATUSES } from "../components/ui";
+import { useI18n } from "../i18n";
 
 const PIPELINE: AppStatus[] = ["saved", "applied", "screening", "interview", "offer"];
 const TERMINAL: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
@@ -23,6 +24,7 @@ function fromDateInput(v: string): string | null {
 }
 
 export default function ApplicationDetail() {
+  const { t } = useI18n();
   const { id } = useParams();
   const appId = Number(id);
   const qc = useQueryClient();
@@ -47,8 +49,8 @@ export default function ApplicationDetail() {
 
   const [editing, setEditing] = useState(false);
 
-  if (q.isLoading) return <div className="muted">Cargando…</div>;
-  if (q.isError || !q.data) return <div className="error">No se encontró la postulación.</div>;
+  if (q.isLoading) return <div className="muted">{t("common.loading")}</div>;
+  if (q.isError || !q.data) return <div className="error">{t("detail.notFound")}</div>;
 
   const app = q.data;
   const reachedSet = new Set<AppStatus>([app.status, ...app.events.map((e) => e.status)]);
@@ -68,7 +70,7 @@ export default function ApplicationDetail() {
 
   return (
     <div>
-      <Link to="/applications" className="muted" style={{ fontSize: 13 }}>← Postulaciones</Link>
+      <Link to="/applications" className="muted" style={{ fontSize: 13 }}>← {t("common.back")}</Link>
       <h1 className="page-title" style={{ marginTop: 8 }}>{p.title}</h1>
 
       {/* ---- meta / edit ---- */}
@@ -78,25 +80,25 @@ export default function ApplicationDetail() {
         ) : (
           <>
             <div className="detail-meta">
-              <Meta label="Empresa">{p.company_name ?? "—"}</Meta>
-              <Meta label="Estado"><Badge status={app.status} /></Meta>
-              <Meta label="Prioridad">{app.priority ? <PriorityBadge priority={app.priority} /> : "—"}</Meta>
-              <Meta label="Aplicada">{app.applied_at ? fmtDate(app.applied_at) : "—"}</Meta>
-              <Meta label="Follow-up">{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
-              <Meta label="Seniority">{p.seniority ?? "—"}</Meta>
-              <Meta label="Fuente">{p.source ?? "—"}</Meta>
-              <Meta label="Salario">
+              <Meta label={t("detail.company")}>{p.company_name ?? "—"}</Meta>
+              <Meta label={t("detail.status")}><Badge status={app.status} /></Meta>
+              <Meta label={t("detail.priority")}>{app.priority ? <PriorityBadge priority={app.priority} /> : "—"}</Meta>
+              <Meta label={t("detail.applied")}>{app.applied_at ? fmtDate(app.applied_at) : "—"}</Meta>
+              <Meta label={t("detail.followup")}>{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
+              <Meta label={t("detail.seniority")}>{p.seniority ?? "—"}</Meta>
+              <Meta label={t("detail.source")}>{p.source ?? "—"}</Meta>
+              <Meta label={t("detail.salary")}>
                 {p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}
               </Meta>
             </div>
             {p.url && !p.url.startsWith("imported://") && (
-              <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>Ver posting ↗</a>
+              <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>{t("detail.viewPosting")}</a>
             )}
             <div className="row" style={{ marginTop: 14 }}>
-              <button className="shrink" onClick={() => setEditing(true)}>Editar datos</button>
+              <button className="shrink" onClick={() => setEditing(true)}>{t("detail.editData")}</button>
               <div style={{ flex: 1 }} />
-              <button className="shrink danger" onClick={() => { if (confirm("¿Borrar esta postulación?")) del.mutate(); }}>
-                Borrar
+              <button className="shrink danger" onClick={() => { if (confirm(t("detail.confirmDelete"))) del.mutate(); }}>
+                {t("detail.delete")}
               </button>
             </div>
           </>
@@ -105,7 +107,7 @@ export default function ApplicationDetail() {
 
       {/* ---- stepper ---- */}
       <div className="panel">
-        <h2>Etapas alcanzadas</h2>
+        <h2>{t("detail.stages")}</h2>
         <div className="stepper">
           {PIPELINE.map((s, i) => {
             const done = i <= reachedIdx;
@@ -118,19 +120,19 @@ export default function ApplicationDetail() {
           })}
         </div>
         {terminal && (
-          <div style={{ marginTop: 12 }}>Resultado final: <Badge status={terminal} /></div>
+          <div style={{ marginTop: 12 }}>{t("detail.finalResult")} <Badge status={terminal} /></div>
         )}
       </div>
 
       {/* ---- tiempos ---- */}
       <div className="panel">
-        <h2>Tiempos</h2>
+        <h2>{t("detail.times")}</h2>
         <div className="detail-meta">
-          <Meta label="Duración del proceso">
-            {processDays !== null ? `${processDays} día${processDays === 1 ? "" : "s"}` : "—"}
+          <Meta label={t("detail.processDuration")}>
+            {processDays !== null ? `${processDays} d` : "—"}
           </Meta>
-          <Meta label="Rondas de entrevista">{interviewRounds}</Meta>
-          <Meta label="En entrevistas (est.)">{interviewRounds ? `~${interviewHours} h` : "—"}</Meta>
+          <Meta label={t("detail.interviewRounds")}>{interviewRounds}</Meta>
+          <Meta label={t("detail.interviewEst")}>{interviewRounds ? `~${interviewHours} h` : "—"}</Meta>
         </div>
       </div>
 
@@ -139,7 +141,7 @@ export default function ApplicationDetail() {
 
       {app.notes && !editing && (
         <div className="panel">
-          <h2>Notas</h2>
+          <h2>{t("detail.notes")}</h2>
           <div className="muted" style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{app.notes}</div>
         </div>
       )}
@@ -157,6 +159,7 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
 }
 
 function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => void; onCancel: () => void }) {
+  const { t } = useI18n();
   const p = app.posting;
   const [f, setF] = useState({
     title: p.title, company_name: p.company_name ?? "", seniority: p.seniority ?? "",
@@ -181,7 +184,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
       });
     },
     onSuccess: onDone,
-    onError: () => setError("No se pudo guardar"),
+    onError: () => setError(t("detail.saveError")),
   });
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -189,45 +192,46 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
 
   return (
     <>
-      <h2>Editar datos</h2>
+      <h2>{t("detail.editTitle")}</h2>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div><label>Rol / título</label><input value={f.title} onChange={set("title")} /></div>
-        <div><label>Empresa</label><input value={f.company_name} onChange={set("company_name")} /></div>
-        <div><label>Seniority</label><input value={f.seniority} onChange={set("seniority")} /></div>
-        <div><label>Fuente</label><input value={f.source} onChange={set("source")} /></div>
-        <div><label>Salario min</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
-        <div><label>Salario max</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
-        <div><label>Moneda</label><input value={f.currency} onChange={set("currency")} /></div>
-        <div><label>Aplicada</label><input type="date" value={f.applied_at} onChange={set("applied_at")} /></div>
+        <div><label>{t("detail.role")}</label><input value={f.title} onChange={set("title")} /></div>
+        <div><label>{t("detail.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
+        <div><label>{t("detail.seniority")}</label><input value={f.seniority} onChange={set("seniority")} /></div>
+        <div><label>{t("detail.source")}</label><input value={f.source} onChange={set("source")} /></div>
+        <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
+        <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
+        <div><label>{t("form.currency")}</label><input value={f.currency} onChange={set("currency")} /></div>
+        <div><label>{t("detail.applied")}</label><input type="date" value={f.applied_at} onChange={set("applied_at")} /></div>
         <div>
-          <label>Estado actual</label>
+          <label>{t("detail.statusCurrent")}</label>
           <select value={f.status} onChange={set("status")}>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <label>Prioridad</label>
+          <label>{t("detail.priority")}</label>
           <select value={f.priority} onChange={set("priority")}>
             <option value="">—</option>
             {PRIORITIES.map((pr) => <option key={pr} value={pr}>{pr}</option>)}
           </select>
         </div>
-        <div><label>Follow-up</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
+        <div><label>{t("detail.followup")}</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
       </div>
       <div style={{ marginTop: 10 }}>
-        <label>Notas</label>
+        <label>{t("detail.notes")}</label>
         <textarea value={f.notes} onChange={set("notes")} rows={4} />
       </div>
       {error && <div className="error">{error}</div>}
       <div className="row" style={{ marginTop: 14 }}>
-        <button className="shrink" disabled={save.isPending} onClick={() => save.mutate()}>Guardar</button>
-        <button className="shrink ghost" onClick={onCancel}>Cancelar</button>
+        <button className="shrink" disabled={save.isPending} onClick={() => save.mutate()}>{t("common.save")}</button>
+        <button className="shrink ghost" onClick={onCancel}>{t("common.cancel")}</button>
       </div>
     </>
   );
 }
 
 function Timeline({ app, onChange }: { app: Application; onChange: () => void }) {
+  const { t } = useI18n();
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
 
@@ -247,14 +251,14 @@ function Timeline({ app, onChange }: { app: Application; onChange: () => void })
   return (
     <div className="panel">
       <div className="row" style={{ alignItems: "center" }}>
-        <h2 style={{ margin: 0, flex: 1 }}>Timeline</h2>
-        {!adding && <button className="shrink" onClick={() => setAdding(true)}>+ Evento</button>}
+        <h2 style={{ margin: 0, flex: 1 }}>{t("detail.timeline")}</h2>
+        {!adding && <button className="shrink" onClick={() => setAdding(true)}>{t("detail.event")}</button>}
       </div>
 
       {adding && <EventForm onSave={(p) => add.mutate(p)} onCancel={() => setAdding(false)} allowSetCurrent />}
 
       {app.events.length === 0 && !adding ? (
-        <p className="muted">Sin eventos.</p>
+        <p className="muted">{t("detail.noEvents")}</p>
       ) : (
         <ul className="timeline" style={{ marginTop: 14 }}>
           {app.events.map((e) => (
@@ -274,8 +278,8 @@ function Timeline({ app, onChange }: { app: Application; onChange: () => void })
                     <Badge status={e.status} />
                     <span className="muted" style={{ fontSize: 12 }}>{fmtDate(e.at)}</span>
                     <span style={{ flex: 1 }} />
-                    <button className="link-btn" onClick={() => setEditId(e.id)}>editar</button>
-                    <button className="link-btn danger-txt" onClick={() => del.mutate(e.id)}>borrar</button>
+                    <button className="link-btn" onClick={() => setEditId(e.id)}>{t("detail.editLink")}</button>
+                    <button className="link-btn danger-txt" onClick={() => del.mutate(e.id)}>{t("detail.deleteLink")}</button>
                   </div>
                   {e.note && <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{e.note}</div>}
                 </div>
@@ -296,6 +300,7 @@ function EventForm({
   onCancel: () => void;
   allowSetCurrent?: boolean;
 }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<AppStatus>(initial?.status ?? "applied");
   const [date, setDate] = useState(initial?.date ?? new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState(initial?.note ?? "");
@@ -305,32 +310,32 @@ function EventForm({
     <div className="event-form">
       <div className="row">
         <div className="shrink">
-          <label>Estado</label>
+          <label>{t("detail.eventStatus")}</label>
           <select value={status} onChange={(e) => setStatus(e.target.value as AppStatus)} style={{ width: "auto" }}>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div className="shrink">
-          <label>Fecha</label>
+          <label>{t("detail.eventDate")}</label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div style={{ flex: 1 }}>
-          <label>Nota</label>
+          <label>{t("detail.eventNote")}</label>
           <input value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
       </div>
       {allowSetCurrent && (
         <label className="check" style={{ marginTop: 8 }}>
           <input type="checkbox" checked={setCurrent} onChange={(e) => setSetCurrent(e.target.checked)} />
-          Marcar como estado actual
+          {t("detail.setCurrent")}
         </label>
       )}
       <div className="row" style={{ marginTop: 10 }}>
         <button className="shrink" onClick={() => onSave({
           status, at: `${date}T00:00:00`, note: note || null,
           ...(allowSetCurrent ? { set_current: setCurrent } : {}),
-        })}>Guardar</button>
-        <button className="shrink ghost" onClick={onCancel}>Cancelar</button>
+        })}>{t("common.save")}</button>
+        <button className="shrink ghost" onClick={onCancel}>{t("common.cancel")}</button>
       </div>
     </div>
   );

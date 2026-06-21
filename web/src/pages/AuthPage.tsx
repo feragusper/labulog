@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api";
+import { useI18n } from "../i18n";
 
 export default function AuthPage() {
+  const { t } = useI18n();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,7 +67,7 @@ export default function AuthPage() {
       await api.login(email, password);
       location.reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Algo falló");
+      setError(err instanceof ApiError ? err.message : t("auth.fail"));
     } finally {
       setBusy(false);
     }
@@ -74,31 +76,31 @@ export default function AuthPage() {
   return (
     <div className="auth-wrap">
       <div className="panel">
-        <h2>{mode === "login" ? "Entrar" : "Crear cuenta"}</h2>
+        <h2>{mode === "login" ? t("auth.login") : t("auth.register")}</h2>
         <form onSubmit={submit}>
           <div className="field">
-            <label>Email</label>
+            <label>{t("auth.email")}</label>
             <input type="email" value={email} required
               onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
-            <label>Contraseña</label>
+            <label>{t("auth.password")}</label>
             <input type="password" value={password} required minLength={6}
               onChange={(e) => setPassword(e.target.value)} />
           </div>
           <button type="submit" disabled={busy} style={{ width: "100%" }}>
-            {busy ? "…" : mode === "login" ? "Entrar" : "Registrarme"}
+            {busy ? "…" : mode === "login" ? t("auth.enter") : t("auth.signup")}
           </button>
           {error && <div className="error">{error}</div>}
         </form>
 
-        <div className="divider"><span>o</span></div>
+        <div className="divider"><span>{t("auth.or")}</span></div>
         <div ref={googleBtn} style={{ display: "flex", justifyContent: "center" }} />
 
         <p className="muted" style={{ marginTop: 14, fontSize: 13 }}>
-          {mode === "login" ? "¿No tenés cuenta? " : "¿Ya tenés cuenta? "}
+          {mode === "login" ? t("auth.noAccount") : t("auth.haveAccount")}
           <a href="#" onClick={(e) => { e.preventDefault(); setError(""); setMode(mode === "login" ? "register" : "login"); }}>
-            {mode === "login" ? "Registrate" : "Entrá"}
+            {mode === "login" ? t("auth.goRegister") : t("auth.goLogin")}
           </a>
         </p>
       </div>

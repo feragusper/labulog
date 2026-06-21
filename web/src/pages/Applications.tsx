@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
 import { PriorityBadge, PRIORITIES, STATUSES } from "../components/ui";
+import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
 const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
@@ -27,6 +28,7 @@ function fmt(ts: number | string | null): string {
 }
 
 export default function Applications() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
 
@@ -91,10 +93,10 @@ export default function Applications() {
   return (
     <div>
       <div className="row" style={{ alignItems: "center" }}>
-        <h1 className="page-title" style={{ flex: 1, margin: 0 }}>Postulaciones</h1>
+        <h1 className="page-title" style={{ flex: 1, margin: 0 }}>{t("apps.title")}</h1>
         <div className="seg">
-          <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>Lista</button>
-          <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}>Tablero</button>
+          <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>{t("apps.list")}</button>
+          <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}>{t("apps.board")}</button>
         </div>
       </div>
 
@@ -102,37 +104,37 @@ export default function Applications() {
 
       <div className="panel">
         <div className="filters">
-          <input placeholder="Buscar empresa / rol…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input placeholder={t("apps.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
           {view === "list" && (
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | AppStatus)}>
-              <option value="all">Todos los estados</option>
+              <option value="all">{t("apps.allStatuses")}</option>
               {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           )}
           <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as "all" | Priority)}>
-            <option value="all">Toda prioridad</option>
+            <option value="all">{t("apps.allPriorities")}</option>
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
           <label className="check">
             <input type="checkbox" checked={hideClosed} onChange={(e) => setHideClosed(e.target.checked)} />
-            Ocultar cerradas
+            {t("apps.hideClosed")}
           </label>
-          <span className="muted" style={{ fontSize: 13 }}>{filtered.length} resultados</span>
+          <span className="muted" style={{ fontSize: 13 }}>{filtered.length} {t("common.results")}</span>
         </div>
 
-        {apps.isLoading && <p className="muted">Cargando…</p>}
-        {apps.data && apps.data.length === 0 && <p className="muted">Sin postulaciones todavía.</p>}
+        {apps.isLoading && <p className="muted">{t("common.loading")}</p>}
+        {apps.data && apps.data.length === 0 && <p className="muted">{t("apps.empty")}</p>}
 
         {apps.data && apps.data.length > 0 && view === "list" && (
           <table>
             <thead>
               <tr>
-                <th className="sortable" onClick={() => toggleSort("company")}>Empresa / Rol{arrow("company")}</th>
-                <th className="sortable" onClick={() => toggleSort("status")}>Estado{arrow("status")}</th>
-                <th className="sortable" onClick={() => toggleSort("priority")}>Prioridad{arrow("priority")}</th>
-                <th className="sortable" onClick={() => toggleSort("salary")}>Salario{arrow("salary")}</th>
-                <th className="sortable" onClick={() => toggleSort("applied")}>Aplicada{arrow("applied")}</th>
-                <th className="sortable" onClick={() => toggleSort("followup")}>Follow-up{arrow("followup")}</th>
+                <th className="sortable" onClick={() => toggleSort("company")}>{t("apps.colCompany")}{arrow("company")}</th>
+                <th className="sortable" onClick={() => toggleSort("status")}>{t("apps.colStatus")}{arrow("status")}</th>
+                <th className="sortable" onClick={() => toggleSort("priority")}>{t("apps.colPriority")}{arrow("priority")}</th>
+                <th className="sortable" onClick={() => toggleSort("salary")}>{t("apps.colSalary")}{arrow("salary")}</th>
+                <th className="sortable" onClick={() => toggleSort("applied")}>{t("apps.colApplied")}{arrow("applied")}</th>
+                <th className="sortable" onClick={() => toggleSort("followup")}>{t("apps.colFollowup")}{arrow("followup")}</th>
               </tr>
             </thead>
             <tbody>
@@ -221,6 +223,7 @@ function Board({ apps, hideClosed, onDrop }: {
 }
 
 function AddApplication({ onAdded }: { onAdded: () => void }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
     url: "", title: "", company_name: "", seniority: "", source: "linkedin",
@@ -255,45 +258,45 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
     setF({ ...f, [k]: e.target.value });
 
   if (!open) {
-    return <div className="panel"><button onClick={() => setOpen(true)}>+ Nueva postulación</button></div>;
+    return <div className="panel"><button onClick={() => setOpen(true)}>{t("apps.new")}</button></div>;
   }
 
   return (
     <div className="panel">
-      <h2>Nueva postulación</h2>
+      <h2>{t("form.new")}</h2>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div><label>URL del posting *</label><input value={f.url} onChange={set("url")} /></div>
-        <div><label>Empresa *</label><input value={f.company_name} onChange={set("company_name")} /></div>
-        <div><label>Rol / título *</label><input value={f.title} onChange={set("title")} /></div>
-        <div><label>Seniority</label><input value={f.seniority} onChange={set("seniority")} placeholder="junior / senior…" /></div>
-        <div><label>Salario min</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
-        <div><label>Salario max</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
-        <div><label>Fuente</label><input value={f.source} onChange={set("source")} /></div>
-        <div><label>Moneda</label><input value={f.currency} onChange={set("currency")} /></div>
+        <div><label>{t("form.url")}</label><input value={f.url} onChange={set("url")} /></div>
+        <div><label>{t("form.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
+        <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
+        <div><label>{t("form.seniority")}</label><input value={f.seniority} onChange={set("seniority")} placeholder="junior / senior…" /></div>
+        <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
+        <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
+        <div><label>{t("form.source")}</label><input value={f.source} onChange={set("source")} /></div>
+        <div><label>{t("form.currency")}</label><input value={f.currency} onChange={set("currency")} /></div>
         <div>
-          <label>Estado inicial</label>
+          <label>{t("form.initialStatus")}</label>
           <select value={f.status} onChange={set("status")}>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <label>Prioridad</label>
+          <label>{t("form.priority")}</label>
           <select value={f.priority} onChange={set("priority")}>
             <option value="">—</option>
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <div><label>Follow-up</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
+        <div><label>{t("form.followup")}</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
       </div>
       <div style={{ marginTop: 10 }}>
-        <label>Notas</label>
+        <label>{t("form.notes")}</label>
         <input value={f.notes} onChange={set("notes")} />
       </div>
       {error && <div className="error">{error}</div>}
       <div className="row" style={{ marginTop: 14 }}>
         <button className="shrink" disabled={!f.url || !f.title || !f.company_name || create.isPending}
-          onClick={() => create.mutate()}>Guardar</button>
-        <button className="shrink ghost" onClick={() => { setOpen(false); setError(""); }}>Cancelar</button>
+          onClick={() => create.mutate()}>{t("common.save")}</button>
+        <button className="shrink ghost" onClick={() => { setOpen(false); setError(""); }}>{t("common.cancel")}</button>
       </div>
     </div>
   );

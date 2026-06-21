@@ -1,88 +1,56 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { api, ApiError, type ImportResult } from "../api";
+import { useState } from "react";
+import { api } from "../api";
+import { useI18n, type Lang } from "../i18n";
+import { getThemePref, setThemePref, type ThemePref } from "../theme";
 
 export default function Settings() {
-  const qc = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<ImportResult | null>(null);
-  const [error, setError] = useState("");
+  const { t, lang, setLang } = useI18n();
+  const [theme, setTheme] = useState<ThemePref>(getThemePref());
 
-  const upload = useMutation({
-    mutationFn: () => api.importCsv(file!),
-    onSuccess: (res) => {
-      setResult(res);
-      setError("");
-      setFile(null);
-      if (inputRef.current) inputRef.current.value = "";
-      qc.invalidateQueries({ queryKey: ["applications"] });
-      qc.invalidateQueries({ queryKey: ["funnel"] });
-    },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "Falló el import"),
-  });
+  const pickTheme = (p: ThemePref) => { setTheme(p); setThemePref(p); };
+
+  const themeOpts: { v: ThemePref; label: string }[] = [
+    { v: "system", label: t("settings.system") },
+    { v: "light", label: t("settings.light") },
+    { v: "dark", label: t("settings.dark") },
+  ];
+  const langOpts: { v: Lang; label: string }[] = [
+    { v: "es", label: "Español" },
+    { v: "en", label: "English" },
+  ];
 
   return (
     <div>
-      <h1 className="page-title">Ajustes</h1>
+      <h1 className="page-title">{t("settings.title")}</h1>
 
       <div className="panel">
-        <h2>Importar postulaciones (CSV)</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Subí un CSV de scouting (formato con columnas <code>Company</code>, <code>Apply</code>,
-          etapas con fechas, <code>Money</code>, <code>Result</code>). Reconstruyo el timeline de
-          estados, parseo salarios y infiero el resultado. Re-importar no duplica.
-        </p>
-
-        <div className="row">
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); }}
-          />
-          <button
-            className="shrink"
-            disabled={!file || upload.isPending}
-            onClick={() => upload.mutate()}
-          >
-            {upload.isPending ? "Importando…" : "Importar"}
-          </button>
-        </div>
-
-        {error && <div className="error">{error}</div>}
-
-        {result && (
-          <div className="lookup-result">
-            <span className="ok">{result.imported} importadas</span>
-            {result.skipped > 0 && <span className="muted"> · {result.skipped} omitidas (ya existían)</span>}
-            {result.errors.length > 0 && (
-              <details style={{ marginTop: 8 }}>
-                <summary className="muted">{result.errors.length} errores</summary>
-                <ul style={{ margin: "6px 0 0", fontSize: 13 }}>
-                  {result.errors.slice(0, 20).map((e, i) => <li key={i}>{e}</li>)}
-                </ul>
-              </details>
-            )}
+        <h2>{t("settings.appearance")}</h2>
+        <div className="field-row">
+          <span className="field-label">{t("settings.theme")}</span>
+          <div className="seg">
+            {themeOpts.map((o) => (
+              <button key={o.v} className={theme === o.v ? "active" : ""} onClick={() => pickTheme(o.v)}>
+                {o.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+        <div className="field-row">
+          <span className="field-label">{t("settings.language")}</span>
+          <div className="seg">
+            {langOpts.map((o) => (
+              <button key={o.v} className={lang === o.v ? "active" : ""} onClick={() => setLang(o.v)}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="panel">
-        <h2>Exportar</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Descargá todas tus postulaciones en CSV (empresa, rol, estado, prioridad,
-          fechas, salario, follow-up, notas).
-        </p>
-        <button onClick={() => api.exportCsv()}>Exportar CSV</button>
-      </div>
-
-      <div className="panel">
-        <h2>¿Otro formato?</h2>
-        <p className="muted" style={{ margin: 0 }}>
-          Hoy soporta el CSV de scouting. Si tenés Excel (.xlsx) u otra estructura,
-          exportalo a CSV o avisá y agrego el parser.
-        </p>
+        <h2>{t("settings.export")}</h2>
+        <p className="muted" style={{ marginTop: 0 }}>{t("settings.exportDesc")}</p>
+        <button onClick={() => api.exportCsv()}>{t("settings.exportBtn")}</button>
       </div>
     </div>
   );

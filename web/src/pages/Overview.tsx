@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
 import { Badge, HOURS_PER_INTERVIEW, pct } from "../components/ui";
+import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "ghosted", "withdrawn"];
 
@@ -14,6 +15,7 @@ function processDays(a: Application): number | null {
 }
 
 export default function Overview() {
+  const { t } = useI18n();
   const funnel = useQuery({ queryKey: ["funnel"], queryFn: api.funnel });
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
   const f = funnel.data;
@@ -33,26 +35,26 @@ export default function Overview() {
 
   return (
     <div>
-      <h1 className="page-title">Resumen</h1>
+      <h1 className="page-title">{t("overview.title")}</h1>
 
       <div className="grid cards">
-        <Card label="Postulaciones" value={f?.total ?? "—"} />
-        <Card label="Tasa respuesta" value={f ? pct(f.response_rate) : "—"} />
-        <Card label="Tasa entrevista" value={f ? pct(f.interview_rate) : "—"} />
-        <Card label="Ofertas" value={f?.by_status.offer ?? "—"} />
-        <Card label="Ghosteadas" value={f?.ghost_count ?? "—"} />
+        <Card label={t("overview.applications")} value={f?.total ?? "—"} />
+        <Card label={t("overview.responseRate")} value={f ? pct(f.response_rate) : "—"} />
+        <Card label={t("overview.interviewRate")} value={f ? pct(f.interview_rate) : "—"} />
+        <Card label={t("overview.offers")} value={f?.by_status.offer ?? "—"} />
+        <Card label={t("overview.ghosted")} value={f?.ghost_count ?? "—"} />
       </div>
 
       <div className="grid cards" style={{ marginTop: 16 }}>
-        <Card label="Rondas de entrevista" value={apps.isLoading ? "—" : interviewRounds} />
-        <Card label="En entrevistas (est.)" value={apps.isLoading ? "—" : `~${interviewHours} h`} />
-        <Card label="Duración media proceso" value={avgProcess !== null ? `${avgProcess} d` : "—"} />
-        <Card label="Follow-ups vencidos" value={apps.isLoading ? "—" : due.length} />
+        <Card label={t("overview.interviewRounds")} value={apps.isLoading ? "—" : interviewRounds} />
+        <Card label={t("overview.interviewHours")} value={apps.isLoading ? "—" : `~${interviewHours} h`} />
+        <Card label={t("overview.avgProcess")} value={avgProcess !== null ? `${avgProcess} d` : "—"} />
+        <Card label={t("overview.dueFollowups")} value={apps.isLoading ? "—" : due.length} />
       </div>
 
       {due.length > 0 && (
         <div className="panel">
-          <h2>Follow-ups vencidos</h2>
+          <h2>{t("overview.dueFollowups")}</h2>
           <ul className="due-list">
             {due.map((a) => (
               <li key={a.id}>
@@ -66,9 +68,9 @@ export default function Overview() {
       )}
 
       <div className="panel">
-        <h2>Por estado</h2>
+        <h2>{t("overview.byStatus")}</h2>
         {!f || f.total === 0 ? (
-          <p className="muted">Cargá postulaciones para ver el embudo.</p>
+          <p className="muted">{t("overview.emptyFunnel")}</p>
         ) : (
           <div className="status-bars">
             {(Object.keys(f.by_status) as AppStatus[])

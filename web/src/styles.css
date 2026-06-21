@@ -1,4 +1,4 @@
-:root {
+:root, :root[data-theme="dark"] {
   --bg: #0f1115;
   --panel: #181b22;
   --panel-2: #20242e;
@@ -9,6 +9,20 @@
   --green: #3ecf8e;
   --yellow: #f5c542;
   --red: #f06363;
+  --radius: 10px;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f6fa;
+  --panel: #ffffff;
+  --panel-2: #eef1f6;
+  --border: #d9dee8;
+  --text: #1a1f29;
+  --muted: #5f6b7c;
+  --accent: #3b6fe0;
+  --green: #1f9d63;
+  --yellow: #b8860b;
+  --red: #d64545;
   --radius: 10px;
 }
 
@@ -55,8 +69,25 @@ a { color: var(--accent); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-.main { flex: 1; padding: 28px 32px; max-width: 1000px; }
+.main { flex: 1; min-width: 0; padding: 28px 36px; }
 .page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 18px; }
+
+/* ---- sidebar collapse ---- */
+.sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 6px 6px 18px; }
+.collapse-btn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  width: 28px; height: 28px; padding: 0; border-radius: 7px; font-size: 14px; line-height: 1;
+}
+.collapse-btn:hover { color: var(--text); }
+.app-shell.collapsed .sidebar { width: 62px; padding: 18px 10px; }
+.app-shell.collapsed .sidebar-brand,
+.app-shell.collapsed .nav-item span:not(.nav-icon),
+.app-shell.collapsed .sidebar-user { display: none; }
+.app-shell.collapsed .sidebar-top { justify-content: center; padding: 6px 0 18px; }
+.app-shell.collapsed .nav-item { justify-content: center; padding: 9px 0; }
+.app-shell.collapsed .sidebar-foot .logout-label { display: none; }
+.logout-icon { display: none; }
+.app-shell.collapsed .logout-icon { display: inline; }
 
 /* ---- status bars (overview) ---- */
 .status-bars { display: grid; gap: 10px; }
@@ -160,6 +191,10 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: upp
 .due-list { list-style: none; margin: 0; padding: 0; }
 .due-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .due-list li > a { flex: 1; }
+
+/* ---- settings rows ---- */
+.field-row { display: flex; align-items: center; gap: 16px; padding: 8px 0; flex-wrap: wrap; }
+.field-label { font-size: 14px; min-width: 90px; color: var(--muted); }
 
 /* ---- view toggle ---- */
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
