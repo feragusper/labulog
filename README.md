@@ -1,200 +1,202 @@
 # Labulog
 
-**Tracker de postulaciones a trabajo + intel de mercado.** Estilo [linprofi](https://linprofi.com/):
-seguí cada postulación a lo largo de su pipeline, reconstruí el timeline de etapas,
-medí cuánto tarda cada proceso y cuánto invertís en entrevistas, y cruzá cualquier
-job posting por URL para saber **si ya aplicaste y cómo te fue** — anti ghost-job.
+**Job-application tracker + market intel.** In the spirit of [linprofi](https://linprofi.com/):
+follow every application through its pipeline, reconstruct the timeline of stages,
+measure how long each process takes and how much time you sink into interviews, and
+cross-check any job posting by URL to know **whether you already applied and how it went**
+— anti ghost-job.
 
 🔗 **Live:** https://labulog.onrender.com · **Repo:** https://github.com/feragusper/labulog
 
 ---
 
-## De qué la va
+## What it's about
 
-Buscar trabajo genera un caos de procesos en paralelo: decenas de empresas, cada una
-en una etapa distinta, muchas que te ghostean, otras que se caen solas. Labulog ordena
-eso:
+Job hunting spawns a mess of parallel processes: dozens of companies, each at a different
+stage, many that ghost you, others that fall through on their own. Labulog brings order:
 
-- **Trackeo de postulaciones** con pipeline granular (saved → applied → first contact →
-  screening → entrevista técnica → entrevista con manager → propuesta → oferta) y estados
-  terminales (rechazada, cancelada, ghosteada, retirada).
-- **Timeline por postulación**: cada cambio de etapa es un evento con fecha y nota; ABM
-  completo para corregir el historial.
-- **Métricas**: tasa de respuesta, tasa de entrevista, rondas de entrevista, tiempo
-  estimado en entrevistas, duración media de los procesos, follow-ups vencidos.
-- **Lookup anti ghost-job**: pegás la URL de un posting y te dice si ya aplicaste y en qué
-  estado quedó. Los postings son globales (data de mercado compartida); las postulaciones
-  son privadas por usuario.
-- **Vistas**: lista con orden y filtros, o tablero Kanban con drag entre etapas.
-- **Import**: CSV de scouting (reconstruye timeline desde columnas de fecha, parsea
-  salarios, infiere el resultado del texto). **Export** a CSV.
-- **UX**: temas claro/oscuro/sistema, español/inglés, sidebar colapsable, responsive.
+- **Application tracking** with a granular pipeline (saved → applied → first contact →
+  screening → technical interview → manager interview → proposal → offer → accepted) and
+  terminal outcomes (rejected, cancelled, ghosted, withdrawn).
+- **Per-application timeline**: every stage change is an event with a date and note; full
+  CRUD to fix the history.
+- **Metrics**: response rate, interview rate, interview rounds, estimated interview time,
+  average process length, overdue follow-ups.
+- **Anti ghost-job lookup**: paste a posting URL and it tells you whether you already
+  applied and what state it ended in. Postings are global (shared market data);
+  applications are private per user.
+- **Views**: a sortable/filterable list, or a Kanban board with drag-between-stages.
+- **Import**: scouting CSV (rebuilds the timeline from date columns, parses salaries,
+  infers the outcome from the free text). **Export** to CSV.
+- **UX**: light/dark/system themes, English/Spanish, collapsible sidebar, responsive.
 
 ## Stack
 
-| Capa | Tecnología |
-|------|-----------|
+| Layer | Technology |
+|-------|-----------|
 | **Backend** | Python 3.11 · [FastAPI](https://fastapi.tiangolo.com/) · [SQLModel](https://sqlmodel.tiangolo.com/) (SQLAlchemy + Pydantic) |
-| **Auth** | JWT propio (PyJWT) + bcrypt · Login con Google (Google Identity Services, verificado con `google-auth`) |
-| **Frontend** | React 18 · TypeScript · [Vite](https://vitejs.dev/) · [TanStack Query](https://tanstack.com/query) · React Router · CSS plano (sin framework) |
-| **i18n / theming** | Context propio liviano (ES/EN) · variables CSS por tema |
-| **DB** | SQLite (dev) · PostgreSQL (prod) — mismo código vía SQLModel |
-| **Driver DB** | psycopg 3 (la URL se normaliza a `postgresql+psycopg://` en runtime) |
-| **Empaquetado** | Docker multi-stage |
-| **Hosting** | [Render](https://render.com) (web service Docker + Postgres) |
+| **Auth** | Own JWT (PyJWT) + bcrypt · Google sign-in (Google Identity Services, verified with `google-auth`) |
+| **Frontend** | React 18 · TypeScript · [Vite](https://vitejs.dev/) · [TanStack Query](https://tanstack.com/query) · React Router · plain CSS (no framework) |
+| **i18n / theming** | Small custom context (EN/ES) · per-theme CSS variables |
+| **DB** | SQLite (dev) · PostgreSQL (prod) — same code via SQLModel |
+| **DB driver** | psycopg 3 (the URL is normalized to `postgresql+psycopg://` at runtime) |
+| **Packaging** | Multi-stage Docker |
+| **Hosting** | [Render](https://render.com) (Docker web service + Postgres) |
 
-## Arquitectura
+## Architecture
 
-**Monolito.** Un solo deployable: FastAPI sirve la API bajo `/api/*` y el SPA de React
-buildeado (`web/dist`) en el resto de las rutas, con fallback a `index.html` para el
-ruteo del lado del cliente. Un repo, un servicio, un dominio.
+**Monolith.** A single deployable: FastAPI serves the API under `/api/*` and the built
+React SPA (`web/dist`) on every other route, falling back to `index.html` for client-side
+routing. One repo, one service, one domain.
 
 ```
 ┌────────────────────────────────────────────┐
 │  FastAPI (uvicorn)                           │
 │                                              │
-│   /api/auth        login / register / google │
-│   /api/postings    lookup por URL, CRUD      │
-│   /api/applications CRUD + ABM de eventos    │
-│   /api/stats       funnel / métricas         │
-│   /api/import      import CSV                 │
-│   /api/health      status + dialect de DB    │
+│   /api/auth         login / register / google│
+│   /api/postings     lookup by URL, CRUD      │
+│   /api/applications CRUD + event ABM         │
+│   /api/stats        funnel / metrics         │
+│   /api/import       CSV import               │
+│   /api/health       status + DB dialect      │
 │                                              │
-│   /  (catch-all)   → sirve web/dist (SPA)    │
+│   /  (catch-all)    → serves web/dist (SPA)  │
 └───────────────────────┬──────────────────────┘
                         │  SQLModel
                 ┌───────▼────────┐
-                │   PostgreSQL    │  (SQLite en dev)
+                │   PostgreSQL    │  (SQLite in dev)
                 └────────────────┘
 ```
 
-### Modelo de datos
+### Data model
 
 ```
 User         (id, email, hashed_password)
 Company      (id, name, …)                      ── global
 JobPosting   (id, company_id, title, url UNIQUE, salary, source, …)  ── global
-Application  (id, user_id, posting_id, status, priority, follow_up_date, …)  ── privada
-StatusEvent  (id, application_id, status, at, note)   ── timeline de la postulación
+Application  (id, user_id, posting_id, status, priority, follow_up_date, …)  ── private
+StatusEvent  (id, application_id, status, at, note)   ── application timeline
 ```
 
-- **`JobPosting.url` es único** = la clave del lookup "¿ya apliqué?" y del anti-ghost.
-- **Postings/Companies globales** → intel de mercado compartida entre usuarios.
-- **Applications/StatusEvents privadas** → cada uno ve solo lo suyo.
-- El **estado actual** vive en `Application.status`; los **eventos** son el historial
-  editable. Las rondas de entrevista (Technical I/II, Manager I/II) son múltiples
-  `StatusEvent`, no estados distintos.
+- **`JobPosting.url` is unique** = the key for the "did I already apply?" lookup and the
+  anti-ghost feature.
+- **Postings/Companies are global** → market intel shared across users.
+- **Applications/StatusEvents are private** → each user sees only their own.
+- The **current status** lives on `Application.status`; the **events** are the editable
+  history. Interview rounds (Technical I/II, Manager I/II) are multiple `StatusEvent`s,
+  not separate statuses.
 
-### Estructura del repo
+### Repo layout
 
 ```
-api/                  Backend FastAPI
+api/                  FastAPI backend
   app/
-    main.py           App, CORS, montaje del SPA, /health
-    config.py         Settings (pydantic-settings, lee env)
-    db.py             Engine, init_db, migraciones idempotentes (ver abajo)
-    models.py         Tablas SQLModel + enums (AppStatus, Priority)
-    schemas.py        DTOs Pydantic (request/response)
-    security.py       Hash bcrypt + JWT
+    main.py           App, CORS, SPA mounting, /health
+    config.py         Settings (pydantic-settings, reads env)
+    db.py             Engine, init_db, idempotent migrations (see below)
+    models.py         SQLModel tables + enums (AppStatus, Priority)
+    schemas.py        Pydantic DTOs (request/response)
+    security.py       bcrypt hashing + JWT
     deps.py           get_current_user (OAuth2 bearer)
-    crud.py           upsert de posting / get-or-create company
+    crud.py           posting upsert / get-or-create company
     routers/          auth, postings, applications, stats, imports
   requirements.txt
-web/                  Frontend React + Vite
+web/                  React + Vite frontend
   src/
-    main.tsx          Bootstrap (QueryClient, providers, tema, i18n)
-    App.tsx           Rutas + gate de auth
-    Layout.tsx        Shell con sidebar colapsable
-    api.ts            Cliente fetch tipado + tipos
-    i18n.tsx          Diccionario ES/EN + provider
-    theme.ts          Tema claro/oscuro/sistema
-    components/ui.tsx Badges, constantes de estado, helpers
+    main.tsx          Bootstrap (QueryClient, providers, theme, i18n)
+    App.tsx           Routes + auth gate
+    Layout.tsx        Shell with collapsible sidebar
+    api.ts            Typed fetch client + types
+    i18n.tsx          EN/ES dictionary + provider
+    theme.ts          Light/dark/system theme
+    components/ui.tsx Badges, status constants, helpers
     pages/            Overview, Applications, ApplicationDetail, Lookup, Settings, AuthPage
-Dockerfile            Build multi-stage (Node → Python)
-render.yaml           Blueprint de Render (web service + Postgres)
+Dockerfile            Multi-stage build (Node → Python)
+render.yaml           Render blueprint (web service + Postgres)
 ```
 
-### Migraciones
+### Migrations
 
-MVP sin Alembic todavía. `init_db()` corre al arrancar y:
-1. `SQLModel.metadata.create_all()` — crea tablas faltantes.
-2. **ADD COLUMN idempotente** para columnas nuevas (`create_all` no altera tablas
-   existentes) — ej. `priority`, `follow_up_date`.
-3. **Auto-extensión del enum** de Postgres (`ALTER TYPE appstatus ADD VALUE IF NOT
-   EXISTS …`) para estados nuevos, ya que `create_all` no toca enums nativos.
+No Alembic yet (MVP). `init_db()` runs at startup and:
+1. `SQLModel.metadata.create_all()` — creates missing tables.
+2. **Idempotent ADD COLUMN** for new columns (`create_all` doesn't alter existing
+   tables) — e.g. `priority`, `follow_up_date`.
+3. **Postgres enum auto-extend** (`ALTER TYPE appstatus ADD VALUE IF NOT EXISTS …`) for
+   new statuses, since `create_all` never touches native enums.
 
-Así el esquema se auto-cura en cada deploy sin migraciones manuales. (Alembic está en el
-roadmap cuando los cambios se pongan no triviales.)
+So the schema self-heals on every deploy with no manual migrations. (Alembic is on the
+roadmap once changes get non-trivial.)
 
 ## Environment
 
-Variables (ver [`api/.env.example`](api/.env.example)):
+Variables (see [`api/.env.example`](api/.env.example)):
 
-| Var | Default | Descripción |
+| Var | Default | Description |
 |-----|---------|-------------|
-| `DATABASE_URL` | `sqlite:///labulog.db` | Conexión. En prod, la URL de Postgres (se normaliza a psycopg3). |
-| `SECRET_KEY` | `dev-secret-change-me` | Firma de los JWT. **Cambiar en prod** (`generateValue` en Render). |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `10080` | Vida del token (7 días). |
-| `CORS_ORIGINS` | `http://localhost:5173` | Orígenes permitidos. Vacío en prod (mismo origen, el SPA lo sirve la API). |
-| `GOOGLE_CLIENT_ID` | `""` | OAuth client id. Vacío = login con Google deshabilitado (el botón no aparece). |
+| `DATABASE_URL` | `sqlite:///labulog.db` | Connection. In prod, the Postgres URL (normalized to psycopg3). |
+| `SECRET_KEY` | `dev-secret-change-me` | JWT signing key. **Change in prod** (`generateValue` on Render). |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `10080` | Token lifetime (7 days). |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed origins. Empty in prod (same origin — the API serves the SPA). |
+| `GOOGLE_CLIENT_ID` | `""` | OAuth client id. Empty = Google sign-in disabled (button hidden). |
 
-## Correr local
+## Run locally
 
-Dos terminales (front con hot-reload + back con la API):
+Two terminals (front with hot-reload + back with the API):
 
 **Backend** (`:8000`)
 ```bash
 cd api
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # default: sqlite local
+cp .env.example .env          # default: local sqlite
 uvicorn app.main:app --reload
 ```
 
-**Frontend** (`:5173`, proxea `/api` → `:8000`)
+**Frontend** (`:5173`, proxies `/api` → `:8000`)
 ```bash
 cd web
 npm install
 npm run dev
 ```
 
-Abrí http://localhost:5173, registrate y entrá. Docs interactivas de la API en
+Open http://localhost:5173, register and sign in. Interactive API docs at
 http://localhost:8000/docs (Swagger).
 
-### Probar el monolito (como en prod)
+### Run the monolith (like prod)
 ```bash
-cd web && npm run build           # genera web/dist
-cd ../api && uvicorn app.main:app # sirve API + SPA en :8000
+cd web && npm run build           # produces web/dist
+cd ../api && uvicorn app.main:app # serves API + SPA on :8000
 ```
 
 ### Docker
 ```bash
 docker build -t labulog .
-docker run -p 8000:8000 -e SECRET_KEY=dev labulog   # sqlite efímero
+docker run -p 8000:8000 -e SECRET_KEY=dev labulog   # ephemeral sqlite
 ```
 
 ## CI/CD
 
-- **CD:** push a `main` en GitHub → Render rebuildea la imagen Docker y redeploya
-  automáticamente. El [`render.yaml`](render.yaml) define el web service + el Postgres
-  como blueprint; `DATABASE_URL` se inyecta solo desde la DB y `SECRET_KEY` se genera.
-  Health check en `/api/health` (devuelve el dialect de la DB para confirmar que prod
-  está sobre Postgres y no sobre sqlite efímero).
-- **Build:** [`Dockerfile`](Dockerfile) multi-stage — stage Node buildea el SPA, stage
-  Python instala deps y corre uvicorn sirviendo API + estáticos.
-- **CI:** todavía no hay pipeline de tests/lint en GitHub Actions (roadmap). Hoy la
-  verificación es `npm run build` (typecheck con `tsc`) local y smoke tests manuales del
-  backend vía TestClient.
+- **CD:** push to `main` on GitHub → Render rebuilds the Docker image and redeploys
+  automatically. [`render.yaml`](render.yaml) defines the web service + Postgres as a
+  blueprint; `DATABASE_URL` is injected from the DB and `SECRET_KEY` is generated. Health
+  check at `/api/health` (returns the DB dialect to confirm prod is on Postgres, not
+  ephemeral sqlite).
+- **Build:** multi-stage [`Dockerfile`](Dockerfile) — a Node stage builds the SPA, a
+  Python stage installs deps and runs uvicorn serving API + static assets.
+- **CI:** no GitHub Actions test/lint pipeline yet (roadmap). For now verification is a
+  local `npm run build` (typecheck via `tsc`) plus manual backend smoke tests through
+  TestClient.
 
-> ⚠️ El Postgres free de Render expira ~90 días. Para una DB durable gratis, creá una en
-> [Neon](https://neon.tech) y cambiá `DATABASE_URL` (el código ya normaliza el driver).
+> ⚠️ Render's free Postgres expires after ~90 days. For a durable free DB, create one on
+> [Neon](https://neon.tech) and swap `DATABASE_URL` (the code already normalizes the driver).
 
 ## Roadmap
 
-- [ ] CI en GitHub Actions (pytest + lint + typecheck en cada PR)
-- [ ] Migraciones con Alembic
-- [ ] Detección automática de ghost jobs (posting activo X días post-aplicación sin respuesta)
-- [ ] Agregados de mercado (salarios por seniority/empresa cruzando usuarios)
-- [ ] Scraper de LinkedIn como worker aparte para completar data de postings
-- [ ] Vistas calendario y Sankey (flow del pipeline)
-- [ ] Duración real de entrevistas (hoy se estima por rondas)
+- [ ] CI on GitHub Actions (pytest + lint + typecheck on every PR)
+- [ ] Alembic migrations
+- [ ] Automatic ghost-job detection (posting still live X days post-application with no reply)
+- [ ] Market aggregates (salaries by seniority/company across users)
+- [ ] LinkedIn scraper as a separate worker to enrich posting data
+- [ ] Calendar and Sankey (pipeline flow) views
+- [ ] Real interview durations (currently estimated by round count)
+```
