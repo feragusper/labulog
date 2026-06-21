@@ -46,6 +46,25 @@ def init_db() -> None:
             for name, sqltype in cols:
                 if name not in existing:
                     conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {name} {sqltype}'))
+    _ensure_enum_values()
+
+
+def _ensure_enum_values() -> None:
+    # Postgres stores AppStatus as a native enum type; create_all never adds new
+    # members. Add any missing ones so newly-introduced statuses are storable.
+    if engine.dialect.name != "postgresql":
+        return
+    from .models import AppStatus
+
+    with engine.connect() as conn:
+        conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+        exists = conn.execute(
+            text("SELECT 1 FROM pg_type WHERE typname = 'appstatus'")
+        ).first()
+        if not exists:
+            return
+        for member in AppStatus:
+            conn.execute(text(f"ALTER TYPE appstatus ADD VALUE IF NOT EXISTS '{member.value}'"))
 
 
 def get_session():
