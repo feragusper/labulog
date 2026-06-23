@@ -29,6 +29,7 @@ class PostingCreate(BaseModel):
     title: str
     company_name: str
     location: Optional[str] = None
+    country: Optional[str] = None
     remote: Optional[str] = None
     seniority: Optional[str] = None
     salary_min: Optional[int] = None
@@ -46,6 +47,7 @@ class PostingRead(BaseModel):
     company_id: Optional[int]
     company_name: Optional[str] = None
     location: Optional[str]
+    country: Optional[str] = None
     remote: Optional[str]
     seniority: Optional[str]
     salary_min: Optional[int]
@@ -66,6 +68,7 @@ class ScrapeResult(BaseModel):
     title: Optional[str] = None
     company_name: Optional[str] = None
     location: Optional[str] = None
+    country: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None
@@ -109,6 +112,7 @@ class PostingUpdate(BaseModel):
     title: Optional[str] = None
     company_name: Optional[str] = None
     location: Optional[str] = None
+    country: Optional[str] = None
     remote: Optional[str] = None
     seniority: Optional[str] = None
     salary_min: Optional[int] = None

@@ -54,6 +54,7 @@ class JobPosting(SQLModel, table=True):
     company_id: Optional[int] = Field(default=None, foreign_key="company.id", index=True)
     title: str
     location: Optional[str] = None
+    country: Optional[str] = None
     remote: Optional[str] = None  # onsite | hybrid | remote
     seniority: Optional[str] = None
     salary_min: Optional[int] = None

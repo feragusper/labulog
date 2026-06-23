@@ -31,6 +31,9 @@ _ENSURE_COLUMNS = {
         ("priority", "VARCHAR"),
         ("follow_up_date", "TIMESTAMP"),
     ],
+    "jobposting": [
+        ("country", "VARCHAR"),
+    ],
 }
 
 

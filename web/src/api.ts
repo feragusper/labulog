@@ -56,6 +56,7 @@ export interface Posting {
   company_id: number | null;
   company_name: string | null;
   location: string | null;
+  country: string | null;
   remote: string | null;
   seniority: string | null;
   salary_min: number | null;
@@ -208,6 +209,7 @@ export interface ScrapeResult {
   title: string | null;
   company_name: string | null;
   location: string | null;
+  country: string | null;
   salary_min: number | null;
   salary_max: number | null;
   currency: string | null;

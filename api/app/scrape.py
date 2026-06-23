@@ -107,7 +107,11 @@ def _from_jsonld(soup: BeautifulSoup, result: ScrapeResult) -> bool:
             addr = loc.get("address")
             if isinstance(addr, dict):
                 result.location = result.location or _clean(
-                    addr.get("addressLocality") or addr.get("addressRegion") or addr.get("addressCountry"))
+                    addr.get("addressLocality") or addr.get("addressRegion"))
+                country = addr.get("addressCountry")
+                if isinstance(country, dict):
+                    country = country.get("name")
+                result.country = result.country or _clean(country)
         sal = node.get("baseSalary")
         if isinstance(sal, dict):
             result.currency = result.currency or sal.get("currency")

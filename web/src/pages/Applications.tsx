@@ -228,7 +228,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
-    url: "", title: "", company_name: "", seniority: "", source: "linkedin",
+    url: "", title: "", company_name: "", seniority: "", country: "", source: "linkedin",
     salary_min: "", salary_max: "", currency: "USD", notes: "",
     status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
     applied_at: new Date().toISOString().slice(0, 10),
@@ -242,6 +242,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         ...prev,
         title: prev.title || r.title || "",
         company_name: prev.company_name || r.company_name || "",
+        country: prev.country || r.country || "",
         salary_min: prev.salary_min || (r.salary_min != null ? String(r.salary_min) : ""),
         salary_max: prev.salary_max || (r.salary_max != null ? String(r.salary_max) : ""),
         currency: r.currency || prev.currency,
@@ -257,7 +258,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       api.createApplication({
         posting: {
           url: f.url || null, title: f.title, company_name: f.company_name,
-          seniority: f.seniority || null, source: f.source || null,
+          seniority: f.seniority || null, country: f.country || null, source: f.source || null,
           salary_min: f.salary_min ? Number(f.salary_min) : null,
           salary_max: f.salary_max ? Number(f.salary_max) : null,
           currency: f.currency || null,
@@ -299,6 +300,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div><label>{t("form.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("form.seniority")}</label><input value={f.seniority} onChange={set("seniority")} placeholder="junior / senior…" /></div>
+        <div><label>{t("form.country")}</label><input value={f.country} onChange={set("country")} placeholder="España / Remote…" /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
         <div><label>{t("form.source")}</label><input value={f.source} onChange={set("source")} /></div>

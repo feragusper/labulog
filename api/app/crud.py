@@ -27,7 +27,7 @@ def upsert_posting(session: Session, data: PostingCreate) -> JobPosting:
     if posting:
         posting.last_seen_at = utcnow()
         # Backfill fields that were empty before.
-        for field in ("location", "remote", "seniority", "salary_min",
+        for field in ("location", "country", "remote", "seniority", "salary_min",
                       "salary_max", "currency", "source", "description", "posted_at"):
             new_val = getattr(data, field)
             if new_val is not None and getattr(posting, field) is None:
@@ -42,6 +42,7 @@ def upsert_posting(session: Session, data: PostingCreate) -> JobPosting:
         title=data.title,
         url=data.url,
         location=data.location,
+        country=data.country,
         remote=data.remote,
         seniority=data.seniority,
         salary_min=data.salary_min,
