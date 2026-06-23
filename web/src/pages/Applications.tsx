@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
 import { PriorityBadge, PRIORITIES, STATUSES, statusColorClass, statusLabel } from "../components/ui";
+import CountrySelect from "../components/CountrySelect";
+import { flag, toCountryCode } from "../countries";
 import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
@@ -159,7 +161,10 @@ function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) 
   return (
     <tr className={`statusrow ${statusColorClass(app.status)}`}>
       <td>
-        <div><Link to={`/applications/${app.id}`}>{p.company_name ?? p.title}</Link></div>
+        <div>
+          {p.country && <span style={{ marginRight: 6 }}>{flag(p.country)}</span>}
+          <Link to={`/applications/${app.id}`}>{p.company_name ?? p.title}</Link>
+        </div>
         <div className="muted" style={{ fontSize: 12 }}>{p.company_name ? p.title : (p.seniority ?? "")}</div>
       </td>
       <td>
@@ -242,7 +247,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         ...prev,
         title: prev.title || r.title || "",
         company_name: prev.company_name || r.company_name || "",
-        country: prev.country || r.country || "",
+        country: prev.country || toCountryCode(r.country),
         salary_min: prev.salary_min || (r.salary_min != null ? String(r.salary_min) : ""),
         salary_max: prev.salary_max || (r.salary_max != null ? String(r.salary_max) : ""),
         currency: r.currency || prev.currency,
@@ -300,7 +305,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div><label>{t("form.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("form.seniority")}</label><input value={f.seniority} onChange={set("seniority")} placeholder="junior / senior…" /></div>
-        <div><label>{t("form.country")}</label><input value={f.country} onChange={set("country")} placeholder="España / Remote…" /></div>
+        <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
         <div><label>{t("form.source")}</label><input value={f.source} onChange={set("source")} /></div>

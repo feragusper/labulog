@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import { Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
+import CountrySelect from "../components/CountrySelect";
+import { countryDisplay } from "../countries";
 import { useI18n } from "../i18n";
 
 const PIPELINE: AppStatus[] = [
@@ -92,7 +94,7 @@ export default function ApplicationDetail() {
               <Meta label={t("detail.applied")}>{app.applied_at ? fmtDate(app.applied_at) : "—"}</Meta>
               <Meta label={t("detail.followup")}>{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
               <Meta label={t("detail.seniority")}>{p.seniority ?? "—"}</Meta>
-              <Meta label={t("form.country")}>{p.country ?? "—"}</Meta>
+              <Meta label={t("form.country")}>{countryDisplay(p.country)}</Meta>
               <Meta label={t("detail.source")}>{p.source ?? "—"}</Meta>
               <Meta label={t("detail.salary")}>
                 {p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}
@@ -204,7 +206,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
         <div><label>{t("detail.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("detail.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("detail.seniority")}</label><input value={f.seniority} onChange={set("seniority")} /></div>
-        <div><label>{t("form.country")}</label><input value={f.country} onChange={set("country")} /></div>
+        <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
         <div><label>{t("detail.source")}</label><input value={f.source} onChange={set("source")} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
