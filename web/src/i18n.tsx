@@ -71,6 +71,7 @@ const ES: Dict = {
   "form.currency": "Moneda",
   "form.initialStatus": "Estado inicial",
   "form.priority": "Prioridad",
+  "form.applied": "Fecha de postulación",
   "form.followup": "Follow-up",
   "form.notes": "Notas",
 
@@ -218,6 +219,7 @@ const EN: Dict = {
   "form.currency": "Currency",
   "form.initialStatus": "Initial status",
   "form.priority": "Priority",
+  "form.applied": "Applied date",
   "form.followup": "Follow-up",
   "form.notes": "Notes",
 

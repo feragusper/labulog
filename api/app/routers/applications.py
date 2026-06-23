@@ -136,7 +136,7 @@ def create_application(
     session.commit()
     session.refresh(app)
 
-    session.add(StatusEvent(application_id=app.id, status=app.status))
+    session.add(StatusEvent(application_id=app.id, status=app.status, at=app.applied_at or utcnow()))
     session.commit()
     return _to_read(session, app)
 

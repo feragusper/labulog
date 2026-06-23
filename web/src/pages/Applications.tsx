@@ -231,6 +231,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
     url: "", title: "", company_name: "", seniority: "", source: "linkedin",
     salary_min: "", salary_max: "", currency: "USD", notes: "",
     status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
+    applied_at: new Date().toISOString().slice(0, 10),
   });
   const [error, setError] = useState("");
 
@@ -263,6 +264,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         },
         status: f.status, notes: f.notes || null,
         priority: f.priority || null,
+        applied_at: f.applied_at ? `${f.applied_at}T00:00:00` : null,
         follow_up_date: f.follow_up_date ? `${f.follow_up_date}T00:00:00` : null,
       }),
     onSuccess: () => {
@@ -314,6 +316,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
+        <div><label>{t("form.applied")}</label><input type="date" value={f.applied_at} onChange={set("applied_at")} /></div>
         <div><label>{t("form.followup")}</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
       </div>
       <div style={{ marginTop: 10 }}>
