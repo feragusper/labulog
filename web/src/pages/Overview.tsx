@@ -1,104 +1,69 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
-import { Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, pct } from "../components/ui";
+import { Badge } from "../components/ui";
+import { flag } from "../countries";
 import { useI18n } from "../i18n";
 
-const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
+// Active = actually in flight: applied through offer (excludes saved + terminals).
+const INACTIVE: AppStatus[] = ["saved", "accepted", "rejected", "cancelled", "ghosted", "withdrawn"];
 
-// Real pipeline stages beyond "applied" (excludes terminal outcomes, which the
-// importer adds as an inferred event and would otherwise count as progress).
-const PROGRESS_STAGES: AppStatus[] = [
-  "first_contact", "screening", "technical_interview",
-  "manager_interview", "interview", "proposal", "offer",
-];
-function progressed(a: Application): boolean {
-  return a.events.some((e) => PROGRESS_STAGES.includes(e.status));
-}
-
-function processDays(a: Application): number | null {
+function lastActivity(a: Application): number {
   const ts = a.events.map((e) => +new Date(e.at));
-  const start = a.applied_at ? +new Date(a.applied_at) : (ts.length ? Math.min(...ts) : null);
-  const last = ts.length ? Math.max(...ts) : start;
-  if (start == null || last == null) return null;
-  return Math.max(0, Math.round((last - start) / 86_400_000));
+  return ts.length ? Math.max(...ts) : +new Date(a.updated_at);
+}
+function fmt(ts: number): string {
+  return new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
 
 export default function Overview() {
   const { t } = useI18n();
-  const funnel = useQuery({ queryKey: ["funnel"], queryFn: api.funnel });
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
-  const f = funnel.data;
-
   const list = apps.data ?? [];
-  const interviewRounds = list.reduce(
-    (n, a) => n + a.events.filter((e) => INTERVIEW_STATUSES.includes(e.status)).length, 0);
-  const interviewHours = interviewRounds * HOURS_PER_INTERVIEW;
-  // Average only over processes that actually moved (ignore the apply-and-die ones).
-  const durations = list.filter(progressed).map(processDays).filter((d): d is number => d !== null);
-  const avgProcess = durations.length
-    ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length) : null;
 
-  const now = new Date();
-  const due = list
-    .filter((a) => a.follow_up_date && !CLOSED.includes(a.status) && new Date(a.follow_up_date) <= now)
-    .sort((a, b) => +new Date(a.follow_up_date!) - +new Date(b.follow_up_date!));
+  const active = list
+    .filter((a) => !INACTIVE.includes(a.status))
+    .sort((a, b) => lastActivity(b) - lastActivity(a));
+  const offers = list.filter((a) => a.status === "offer" || a.status === "accepted").length;
+  const now = Date.now();
+  const due = list.filter((a) =>
+    a.follow_up_date && !INACTIVE.includes(a.status) && +new Date(a.follow_up_date) <= now).length;
 
   return (
     <div>
-      <h1 className="page-title">{t("overview.title")}</h1>
-
-      <div className="grid cards">
-        <Card label={t("overview.applications")} value={f?.total ?? "—"} />
-        <Card label={t("overview.responseRate")} value={f ? pct(f.response_rate) : "—"} />
-        <Card label={t("overview.interviewRate")} value={f ? pct(f.interview_rate) : "—"} />
-        <Card label={t("overview.offers")} value={f ? f.by_status.offer + f.by_status.accepted : "—"} />
-        <Card label={t("overview.ghosted")} value={f?.ghost_count ?? "—"} />
+      <div className="row" style={{ alignItems: "center" }}>
+        <h1 className="page-title" style={{ flex: 1, margin: 0 }}>{t("home.title")}</h1>
+        <Link to="/analytics" className="muted" style={{ fontSize: 13 }}>{t("home.seeAnalytics")} →</Link>
       </div>
 
       <div className="grid cards" style={{ marginTop: 16 }}>
-        <Card label={t("overview.interviewRounds")} value={apps.isLoading ? "—" : interviewRounds} />
-        <Card label={t("overview.interviewHours")} value={apps.isLoading ? "—" : `~${interviewHours} h`} />
-        <Card label={t("overview.avgProcess")} value={avgProcess !== null ? `${avgProcess} d` : "—"} />
-        <Card label={t("overview.dueFollowups")} value={apps.isLoading ? "—" : due.length} />
+        <Card label={t("home.inProgress")} value={apps.isLoading ? "—" : active.length} />
+        <Card label={t("overview.offers")} value={apps.isLoading ? "—" : offers} />
+        <Card label={t("overview.dueFollowups")} value={apps.isLoading ? "—" : due} />
       </div>
 
-      {due.length > 0 && (
-        <div className="panel">
-          <h2>{t("overview.dueFollowups")}</h2>
-          <ul className="due-list">
-            {due.map((a) => (
-              <li key={a.id}>
-                <Link to={`/applications/${a.id}`}>{a.posting.company_name ?? a.posting.title}</Link>
-                <span className="due">{new Date(a.follow_up_date!).toLocaleDateString("es-AR", { day: "2-digit", month: "short" })}</span>
-                <Badge status={a.status} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <div className="panel">
-        <h2>{t("overview.byStatus")}</h2>
-        {!f || f.total === 0 ? (
-          <p className="muted">{t("overview.emptyFunnel")}</p>
-        ) : (
-          <div className="status-bars">
-            {(Object.keys(f.by_status) as AppStatus[])
-              .filter((s) => f.by_status[s] > 0)
-              .map((s) => (
-                <div key={s} className="status-bar-row">
-                  <div className="status-bar-label"><Badge status={s} /></div>
-                  <div className="status-bar-track">
-                    <div
-                      className={`status-bar-fill ${s}`}
-                      style={{ width: `${(f.by_status[s] / f.total) * 100}%` }}
-                    />
-                  </div>
-                  <div className="status-bar-count muted">{f.by_status[s]}</div>
-                </div>
+        <h2>{t("home.inProgress")}</h2>
+        {apps.isLoading && <p className="muted">{t("common.loading")}</p>}
+        {!apps.isLoading && active.length === 0 && <p className="muted">{t("home.noActive")}</p>}
+        {active.length > 0 && (
+          <table>
+            <tbody>
+              {active.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    {a.posting.country && <span style={{ marginRight: 6 }}>{flag(a.posting.country)}</span>}
+                    <Link to={`/applications/${a.id}`}>{a.posting.company_name ?? a.posting.title}</Link>
+                    {a.posting.company_name && (
+                      <div className="muted" style={{ fontSize: 12 }}>{a.posting.title}</div>
+                    )}
+                  </td>
+                  <td><Badge status={a.status} /></td>
+                  <td className="muted" style={{ fontSize: 13, textAlign: "right" }}>{fmt(lastActivity(a))}</td>
+                </tr>
               ))}
-          </div>
+            </tbody>
+          </table>
         )}
       </div>
     </div>

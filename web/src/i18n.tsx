@@ -15,8 +15,24 @@ type Dict = Record<string, string>;
 const ES: Dict = {
   "nav.overview": "Resumen",
   "nav.applications": "Postulaciones",
-  "nav.lookup": "¿Ya apliqué?",
+  "nav.analytics": "Analítica",
   "nav.settings": "Ajustes",
+
+  "home.title": "Resumen",
+  "home.inProgress": "En progreso",
+  "home.noActive": "Sin procesos activos.",
+  "home.seeAnalytics": "Ver analítica",
+  "analytics.title": "Analítica",
+
+  "contacts.title": "Contactos",
+  "contacts.add": "+ Contacto",
+  "contacts.name": "Nombre",
+  "contacts.role": "Rol",
+  "contacts.stage": "Etapa",
+  "contacts.none": "Sin contactos.",
+  "contacts.rolePh": "recruiter / hiring manager / tech lead…",
+
+  "lookup.alreadyInline": "Ya aplicaste a esta URL · estado:",
   "nav.logout": "Salir",
   "nav.collapse": "Colapsar",
   "nav.expand": "Expandir",
@@ -162,10 +178,26 @@ const ES: Dict = {
 };
 
 const EN: Dict = {
-  "nav.overview": "Overview",
+  "nav.overview": "Home",
   "nav.applications": "Applications",
-  "nav.lookup": "Already applied?",
+  "nav.analytics": "Analytics",
   "nav.settings": "Settings",
+
+  "home.title": "Home",
+  "home.inProgress": "In progress",
+  "home.noActive": "No active processes.",
+  "home.seeAnalytics": "See analytics",
+  "analytics.title": "Analytics",
+
+  "contacts.title": "Contacts",
+  "contacts.add": "+ Contact",
+  "contacts.name": "Name",
+  "contacts.role": "Role",
+  "contacts.stage": "Stage",
+  "contacts.none": "No contacts.",
+  "contacts.rolePh": "recruiter / hiring manager / tech lead…",
+
+  "lookup.alreadyInline": "Already applied to this URL · status:",
   "nav.logout": "Sign out",
   "nav.collapse": "Collapse",
   "nav.expand": "Expand",

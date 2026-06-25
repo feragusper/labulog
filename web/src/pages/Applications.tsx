@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
-import { PriorityBadge, PRIORITIES, STATUSES, statusColorClass, statusLabel } from "../components/ui";
+import { Badge, PriorityBadge, PRIORITIES, STATUSES, statusColorClass, statusLabel } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
 import { flag, toCountryCode } from "../countries";
 import { useI18n } from "../i18n";
@@ -233,12 +233,17 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
-    url: "", title: "", company_name: "", seniority: "", country: "", source: "linkedin",
+    url: "", title: "", company_name: "", country: "", source: "linkedin",
     salary_min: "", salary_max: "", currency: "USD", notes: "",
     status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
     applied_at: new Date().toISOString().slice(0, 10),
   });
+  const [contacts, setContacts] = useState<{ name: string; role: string; stage: string }[]>([]);
   const [error, setError] = useState("");
+
+  // Inline "did I already apply to this URL?" check.
+  const lookup = useMutation({ mutationFn: (url: string) => api.lookup(url) });
+  const checkUrl = () => { if (f.url.trim()) lookup.mutate(f.url.trim()); };
 
   const autofill = useMutation({
     mutationFn: () => api.scrape(f.url),
@@ -263,7 +268,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       api.createApplication({
         posting: {
           url: f.url || null, title: f.title, company_name: f.company_name,
-          seniority: f.seniority || null, country: f.country || null, source: f.source || null,
+          country: f.country || null, source: f.source || null,
           salary_min: f.salary_min ? Number(f.salary_min) : null,
           salary_max: f.salary_max ? Number(f.salary_max) : null,
           currency: f.currency || null,
@@ -272,10 +277,15 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         priority: f.priority || null,
         applied_at: f.applied_at ? `${f.applied_at}T00:00:00` : null,
         follow_up_date: f.follow_up_date ? `${f.follow_up_date}T00:00:00` : null,
+        contacts: contacts
+          .filter((ct) => ct.name.trim())
+          .map((ct) => ({ name: ct.name.trim(), role: ct.role || null, stage: ct.stage || null })),
       }),
     onSuccess: () => {
       setOpen(false); setError("");
       setF({ ...f, url: "", title: "", company_name: "", notes: "", follow_up_date: "" });
+      setContacts([]);
+      lookup.reset();
       onAdded();
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : "Error"),
@@ -294,17 +304,24 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       <div style={{ marginBottom: 12 }}>
         <label>{t("form.url")}</label>
         <div className="row">
-          <input value={f.url} onChange={set("url")} placeholder="https://…" />
+          <input value={f.url} onChange={set("url")} onBlur={checkUrl} placeholder="https://…" />
           <button className="shrink ghost" disabled={!f.url || autofill.isPending}
             onClick={() => autofill.mutate()}>
             {autofill.isPending ? t("form.autofilling") : `✨ ${t("form.autofill")}`}
           </button>
         </div>
+        {lookup.data?.already_applied && (
+          <div className="lookup-result" style={{ marginTop: 8 }}>
+            <span className="due">⚠ {t("lookup.alreadyInline")} <Badge status={lookup.data.status!} /></span>
+            {lookup.data.application_id && (
+              <Link to={`/applications/${lookup.data.application_id}`} style={{ marginLeft: 8, fontSize: 13 }}>→</Link>
+            )}
+          </div>
+        )}
       </div>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div><label>{t("form.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
-        <div><label>{t("form.seniority")}</label><input value={f.seniority} onChange={set("seniority")} placeholder="junior / senior…" /></div>
         <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
@@ -326,6 +343,29 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div><label>{t("form.applied")}</label><input type="date" value={f.applied_at} onChange={set("applied_at")} /></div>
         <div><label>{t("form.followup")}</label><input type="date" value={f.follow_up_date} onChange={set("follow_up_date")} /></div>
       </div>
+      <div style={{ marginTop: 12 }}>
+        <div className="row" style={{ alignItems: "center", marginBottom: 6 }}>
+          <label style={{ margin: 0, flex: 1 }}>{t("contacts.title")}</label>
+          <button className="shrink ghost" onClick={() => setContacts((cs) => [...cs, { name: "", role: "", stage: "" }])}>
+            {t("contacts.add")}
+          </button>
+        </div>
+        {contacts.map((ct, i) => (
+          <div className="row" key={i} style={{ marginBottom: 6 }}>
+            <input placeholder={t("contacts.name")} value={ct.name}
+              onChange={(e) => setContacts((cs) => cs.map((c, j) => j === i ? { ...c, name: e.target.value } : c))} />
+            <input placeholder={t("contacts.rolePh")} value={ct.role}
+              onChange={(e) => setContacts((cs) => cs.map((c, j) => j === i ? { ...c, role: e.target.value } : c))} />
+            <select value={ct.stage} style={{ width: "auto" }}
+              onChange={(e) => setContacts((cs) => cs.map((c, j) => j === i ? { ...c, stage: e.target.value } : c))}>
+              <option value="">{t("contacts.stage")}</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
+            </select>
+            <button className="shrink danger" onClick={() => setContacts((cs) => cs.filter((_, j) => j !== i))}>✕</button>
+          </div>
+        ))}
+      </div>
+
       <div style={{ marginTop: 10 }}>
         <label>{t("form.notes")}</label>
         <input value={f.notes} onChange={set("notes")} />

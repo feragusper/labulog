@@ -93,7 +93,6 @@ export default function ApplicationDetail() {
               <Meta label={t("detail.priority")}>{app.priority ? <PriorityBadge priority={app.priority} /> : "—"}</Meta>
               <Meta label={t("detail.applied")}>{app.applied_at ? fmtDate(app.applied_at) : "—"}</Meta>
               <Meta label={t("detail.followup")}>{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
-              <Meta label={t("detail.seniority")}>{p.seniority ?? "—"}</Meta>
               <Meta label={t("form.country")}>{countryDisplay(p.country)}</Meta>
               <Meta label={t("detail.source")}>{p.source ?? "—"}</Meta>
               <Meta label={t("detail.salary")}>
@@ -145,6 +144,9 @@ export default function ApplicationDetail() {
         </div>
       </div>
 
+      {/* ---- contacts ABM ---- */}
+      <Contacts app={app} onChange={invalidate} />
+
       {/* ---- timeline ABM ---- */}
       <Timeline app={app} onChange={invalidate} />
 
@@ -171,7 +173,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
   const { t } = useI18n();
   const p = app.posting;
   const [f, setF] = useState({
-    title: p.title, company_name: p.company_name ?? "", seniority: p.seniority ?? "",
+    title: p.title, company_name: p.company_name ?? "",
     country: p.country ?? "", source: p.source ?? "", salary_min: p.salary_min?.toString() ?? "",
     salary_max: p.salary_max?.toString() ?? "", currency: p.currency ?? "",
     status: app.status, applied_at: toDateInput(app.applied_at), notes: app.notes ?? "",
@@ -182,7 +184,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
   const save = useMutation({
     mutationFn: async () => {
       await api.updatePosting(p.id, {
-        title: f.title, company_name: f.company_name || null, seniority: f.seniority || null,
+        title: f.title, company_name: f.company_name || null,
         country: f.country || null, source: f.source || null, currency: f.currency || null,
         salary_min: f.salary_min ? Number(f.salary_min) : null,
         salary_max: f.salary_max ? Number(f.salary_max) : null,
@@ -205,7 +207,6 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div><label>{t("detail.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("detail.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
-        <div><label>{t("detail.seniority")}</label><input value={f.seniority} onChange={set("seniority")} /></div>
         <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
         <div><label>{t("detail.source")}</label><input value={f.source} onChange={set("source")} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
@@ -237,6 +238,68 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
         <button className="shrink ghost" onClick={onCancel}>{t("common.cancel")}</button>
       </div>
     </>
+  );
+}
+
+function Contacts({ app, onChange }: { app: Application; onChange: () => void }) {
+  const { t } = useI18n();
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ name: "", role: "", stage: "" });
+
+  const add = useMutation({
+    mutationFn: () => api.addContact(app.id, {
+      name: draft.name.trim(), role: draft.role || null, stage: draft.stage || null,
+    }),
+    onSuccess: () => { setDraft({ name: "", role: "", stage: "" }); setAdding(false); onChange(); },
+  });
+  const del = useMutation({
+    mutationFn: (cid: number) => api.deleteContact(app.id, cid),
+    onSuccess: onChange,
+  });
+
+  return (
+    <div className="panel">
+      <div className="row" style={{ alignItems: "center" }}>
+        <h2 style={{ margin: 0, flex: 1 }}>{t("contacts.title")}</h2>
+        {!adding && <button className="shrink" onClick={() => setAdding(true)}>{t("contacts.add")}</button>}
+      </div>
+
+      {adding && (
+        <div className="event-form">
+          <div className="row">
+            <input placeholder={t("contacts.name")} value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            <input placeholder={t("contacts.rolePh")} value={draft.role}
+              onChange={(e) => setDraft({ ...draft, role: e.target.value })} />
+            <select value={draft.stage} style={{ width: "auto" }}
+              onChange={(e) => setDraft({ ...draft, stage: e.target.value })}>
+              <option value="">{t("contacts.stage")}</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
+            </select>
+          </div>
+          <div className="row" style={{ marginTop: 10 }}>
+            <button className="shrink" disabled={!draft.name.trim() || add.isPending} onClick={() => add.mutate()}>{t("common.save")}</button>
+            <button className="shrink ghost" onClick={() => setAdding(false)}>{t("common.cancel")}</button>
+          </div>
+        </div>
+      )}
+
+      {app.contacts.length === 0 && !adding ? (
+        <p className="muted">{t("contacts.none")}</p>
+      ) : (
+        <ul className="contact-list" style={{ marginTop: 12 }}>
+          {app.contacts.map((c) => (
+            <li key={c.id}>
+              <span className="contact-name">{c.name}</span>
+              {c.role && <span className="muted"> · {c.role}</span>}
+              {c.stage && <Badge status={c.stage} />}
+              <span style={{ flex: 1 }} />
+              <button className="link-btn danger-txt" onClick={() => del.mutate(c.id)}>{t("detail.deleteLink")}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

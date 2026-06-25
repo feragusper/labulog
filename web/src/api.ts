@@ -75,6 +75,14 @@ export interface StatusEvent {
   note: string | null;
 }
 
+export interface Contact {
+  id: number;
+  name: string;
+  role: string | null;
+  stage: AppStatus | null;
+  note: string | null;
+}
+
 export interface Application {
   id: number;
   status: AppStatus;
@@ -89,6 +97,7 @@ export interface Application {
   updated_at: string;
   posting: Posting;
   events: StatusEvent[];
+  contacts: Contact[];
 }
 
 export interface Funnel {
@@ -165,6 +174,15 @@ export const api = {
 
   deleteEvent: (appId: number, eventId: number) =>
     request<Application>(`/api/applications/${appId}/events/${eventId}`, { method: "DELETE" }),
+
+  addContact: (appId: number, payload: unknown) =>
+    request<Application>(`/api/applications/${appId}/contacts`, { method: "POST", body: JSON.stringify(payload) }),
+
+  updateContact: (appId: number, contactId: number, payload: unknown) =>
+    request<Application>(`/api/applications/${appId}/contacts/${contactId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+
+  deleteContact: (appId: number, contactId: number) =>
+    request<Application>(`/api/applications/${appId}/contacts/${contactId}`, { method: "DELETE" }),
 
   lookup: (url: string) =>
     request<Lookup>(`/api/postings/lookup?url=${encodeURIComponent(url)}`),

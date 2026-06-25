@@ -9,11 +9,14 @@ from sqlmodel import Session, select
 from ..crud import upsert_posting
 from ..db import get_session
 from ..deps import get_current_user
-from ..models import Application, Company, JobPosting, StatusEvent, User, utcnow
+from ..models import Application, Company, Contact, JobPosting, StatusEvent, User, utcnow
 from ..schemas import (
     ApplicationCreate,
     ApplicationRead,
     ApplicationUpdate,
+    ContactCreate,
+    ContactRead,
+    ContactUpdate,
     PostingRead,
     StatusEventCreate,
     StatusEventRead,
@@ -34,6 +37,9 @@ def _to_read(session: Session, app: Application) -> ApplicationRead:
         .where(StatusEvent.application_id == app.id)
         .order_by(StatusEvent.at)
     ).all()
+    contacts = session.exec(
+        select(Contact).where(Contact.application_id == app.id).order_by(Contact.created_at)
+    ).all()
     return ApplicationRead(
         id=app.id,
         status=app.status,
@@ -48,6 +54,7 @@ def _to_read(session: Session, app: Application) -> ApplicationRead:
         updated_at=app.updated_at,
         posting=posting_read,
         events=[StatusEventRead.model_validate(e, from_attributes=True) for e in events],
+        contacts=[ContactRead.model_validate(c, from_attributes=True) for c in contacts],
     )
 
 
@@ -137,6 +144,59 @@ def create_application(
     session.refresh(app)
 
     session.add(StatusEvent(application_id=app.id, status=app.status, at=app.applied_at or utcnow()))
+    for c in data.contacts:
+        if c.name.strip():
+            session.add(Contact(application_id=app.id, name=c.name.strip(),
+                                role=c.role, stage=c.stage, note=c.note))
+    session.commit()
+    return _to_read(session, app)
+
+
+@router.post("/{app_id}/contacts", response_model=ApplicationRead, status_code=201)
+def add_contact(
+    app_id: int,
+    data: ContactCreate,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    session.add(Contact(application_id=app.id, name=data.name.strip(),
+                        role=data.role, stage=data.stage, note=data.note))
+    session.commit()
+    return _to_read(session, app)
+
+
+@router.patch("/{app_id}/contacts/{contact_id}", response_model=ApplicationRead)
+def update_contact(
+    app_id: int,
+    contact_id: int,
+    data: ContactUpdate,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    contact = session.get(Contact, contact_id)
+    if not contact or contact.application_id != app.id:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(contact, key, value)
+    session.add(contact)
+    session.commit()
+    return _to_read(session, app)
+
+
+@router.delete("/{app_id}/contacts/{contact_id}", response_model=ApplicationRead)
+def delete_contact(
+    app_id: int,
+    contact_id: int,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    contact = session.get(Contact, contact_id)
+    if not contact or contact.application_id != app.id:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    session.delete(contact)
     session.commit()
     return _to_read(session, app)
 
@@ -248,5 +308,9 @@ def delete_application(
         select(StatusEvent).where(StatusEvent.application_id == app.id)
     ).all():
         session.delete(e)
+    for c in session.exec(
+        select(Contact).where(Contact.application_id == app.id)
+    ).all():
+        session.delete(c)
     session.delete(app)
     session.commit()

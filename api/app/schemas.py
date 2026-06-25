@@ -95,6 +95,7 @@ class ApplicationCreate(BaseModel):
     referral: Optional[str] = None
     notes: Optional[str] = None
     applied_at: Optional[datetime] = None
+    contacts: List["ContactCreate"] = []
 
 
 class ApplicationUpdate(BaseModel):
@@ -121,6 +122,28 @@ class PostingUpdate(BaseModel):
     source: Optional[str] = None
     description: Optional[str] = None
     posted_at: Optional[datetime] = None
+
+
+class ContactCreate(BaseModel):
+    name: str
+    role: Optional[str] = None
+    stage: Optional[AppStatus] = None
+    note: Optional[str] = None
+
+
+class ContactUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    stage: Optional[AppStatus] = None
+    note: Optional[str] = None
+
+
+class ContactRead(BaseModel):
+    id: int
+    name: str
+    role: Optional[str]
+    stage: Optional[AppStatus]
+    note: Optional[str]
 
 
 class StatusEventCreate(BaseModel):
@@ -157,6 +180,7 @@ class ApplicationRead(BaseModel):
     updated_at: datetime
     posting: PostingRead
     events: List[StatusEventRead] = []
+    contacts: List[ContactRead] = []
 
 
 # ---- stats ----
@@ -167,3 +191,7 @@ class FunnelStats(BaseModel):
     interview_rate: float
     offer_rate: float
     ghost_count: int
+
+
+# Resolve forward reference (ContactCreate defined after ApplicationCreate).
+ApplicationCreate.model_rebuild()

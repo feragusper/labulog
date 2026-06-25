@@ -93,3 +93,14 @@ class StatusEvent(SQLModel, table=True):
     status: AppStatus
     at: datetime = Field(default_factory=utcnow)
     note: Optional[str] = None
+
+
+class Contact(SQLModel, table=True):
+    """A person you talked to during a process (recruiter, hiring manager, …)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    application_id: int = Field(foreign_key="application.id", index=True)
+    name: str
+    role: Optional[str] = None              # recruiter, hiring manager, tech lead, …
+    stage: Optional[AppStatus] = None       # stage where they got involved
+    note: Optional[str] = None
+    created_at: datetime = Field(default_factory=utcnow)

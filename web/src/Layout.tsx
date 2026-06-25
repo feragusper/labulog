@@ -8,7 +8,7 @@ const COLLAPSE_KEY = "labulog_sidebar_collapsed";
 const NAV = [
   { to: "/", key: "nav.overview", end: true, icon: "▦" },
   { to: "/applications", key: "nav.applications", icon: "▤" },
-  { to: "/lookup", key: "nav.lookup", icon: "⌕" },
+  { to: "/analytics", key: "nav.analytics", icon: "▣" },
   { to: "/settings", key: "nav.settings", icon: "⚙" },
 ];
 
