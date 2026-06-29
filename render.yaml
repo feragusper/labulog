@@ -1,5 +1,6 @@
-# Render blueprint: one Docker web service + one managed Postgres.
-# Push to GitHub, then in Render: New > Blueprint, point at this repo.
+# Render blueprint: one Docker web service. Postgres lives on Neon (durable free
+# tier), not Render — Render's free Postgres expires. Push to GitHub, then in
+# Render: New > Blueprint, point at this repo.
 services:
   - type: web
     name: labulog
@@ -9,18 +10,13 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: labulog-db
-          property: connectionString
+        # Set manually in Render dashboard > Environment to the Neon pooler
+        # connection string (postgresql://...-pooler...neon.tech/...?sslmode=require).
+        # Kept out of the blueprint so the credential isn't committed.
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
         value: ""   # same-origin in prod; SPA served by the API itself
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "10080"
-
-databases:
-  - name: labulog-db
-    plan: free
-    # NOTE: Render free Postgres expires ~90 days. Swap DATABASE_URL to a Neon
-    # connection string later if you want a durable free DB.

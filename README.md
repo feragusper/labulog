@@ -41,7 +41,7 @@ stage, many that ghost you, others that fall through on their own. Labulog bring
 | **DB** | SQLite (dev) · PostgreSQL (prod) — same code via SQLModel |
 | **DB driver** | psycopg 3 (the URL is normalized to `postgresql+psycopg://` at runtime) |
 | **Packaging** | Multi-stage Docker |
-| **Hosting** | [Render](https://render.com) (Docker web service + Postgres) |
+| **Hosting** | [Render](https://render.com) (Docker web service) · [Neon](https://neon.tech) (Postgres) |
 
 ## Architecture
 
@@ -112,7 +112,7 @@ web/                  React + Vite frontend
     components/ui.tsx Badges, status constants, helpers
     pages/            Overview, Applications, ApplicationDetail, Lookup, Settings, AuthPage
 Dockerfile            Multi-stage build (Node → Python)
-render.yaml           Render blueprint (web service + Postgres)
+render.yaml           Render blueprint (web service; DB is external on Neon)
 ```
 
 ### Migrations
@@ -178,17 +178,18 @@ docker run -p 8000:8000 -e SECRET_KEY=dev labulog   # ephemeral sqlite
 
 - **CD:** push to `main` on GitHub → Render rebuilds the Docker image and redeploys
   automatically. [`render.yaml`](render.yaml) defines the web service + Postgres as a
-  blueprint; `DATABASE_URL` is injected from the DB and `SECRET_KEY` is generated. Health
-  check at `/api/health` (returns the DB dialect to confirm prod is on Postgres, not
-  ephemeral sqlite).
+  blueprint; `DATABASE_URL` is set manually in the dashboard (points at Neon) and
+  `SECRET_KEY` is generated. Health check at `/api/health` (returns the DB dialect to
+  confirm prod is on Postgres, not ephemeral sqlite).
 - **Build:** multi-stage [`Dockerfile`](Dockerfile) — a Node stage builds the SPA, a
   Python stage installs deps and runs uvicorn serving API + static assets.
 - **CI:** no GitHub Actions test/lint pipeline yet (roadmap). For now verification is a
   local `npm run build` (typecheck via `tsc`) plus manual backend smoke tests through
   TestClient.
 
-> ⚠️ Render's free Postgres expires after ~90 days. For a durable free DB, create one on
-> [Neon](https://neon.tech) and swap `DATABASE_URL` (the code already normalizes the driver).
+> ℹ️ Postgres runs on [Neon](https://neon.tech)'s durable free tier (Render's free
+> Postgres expires). `DATABASE_URL` is the Neon pooler connection string, set manually in
+> the Render dashboard; the code normalizes the driver to psycopg3 automatically.
 
 ## Roadmap
 
