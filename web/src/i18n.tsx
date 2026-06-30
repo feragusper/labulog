@@ -55,6 +55,10 @@ const ES: Dict = {
   "overview.dueFollowups": "Follow-ups vencidos",
   "overview.byStatus": "Por estado",
   "overview.emptyFunnel": "Cargá postulaciones para ver el embudo.",
+  "overview.stageFunnel": "Etapas alcanzadas (embudo)",
+  "overview.stageFunnelHint": "Cuántas postulaciones llegaron al menos hasta cada etapa, sin importar cómo terminaron.",
+  "overview.outcomeByStage": "Cierres por etapa alcanzada",
+  "overview.outcomeByStageHint": "En qué etapa se cerraron las que no avanzaron, y por qué.",
 
   "apps.title": "Postulaciones",
   "apps.list": "Lista",
@@ -223,6 +227,10 @@ const EN: Dict = {
   "overview.dueFollowups": "Overdue follow-ups",
   "overview.byStatus": "By status",
   "overview.emptyFunnel": "Add applications to see the funnel.",
+  "overview.stageFunnel": "Stages reached (funnel)",
+  "overview.stageFunnelHint": "How many applications reached at least each stage, regardless of how they ended.",
+  "overview.outcomeByStage": "Closures by stage reached",
+  "overview.outcomeByStageHint": "Where the ones that didn't move forward closed out, and why.",
 
   "apps.title": "Applications",
   "apps.list": "List",

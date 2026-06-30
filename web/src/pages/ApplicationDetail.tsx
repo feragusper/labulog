@@ -2,22 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
-import { Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PriorityBadge, PRIORITIES, STATUSES, statusLabel } from "../components/ui";
+import {
+  Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PIPELINE, PriorityBadge, PRIORITIES,
+  rankOf, STATUSES, statusLabel, TERMINAL,
+} from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
 import { countryDisplay } from "../countries";
 import { useI18n } from "../i18n";
-
-const PIPELINE: AppStatus[] = [
-  "saved", "applied", "first_contact", "screening",
-  "technical_interview", "manager_interview", "proposal", "offer",
-];
-const TERMINAL: AppStatus[] = ["accepted", "rejected", "cancelled", "ghosted", "withdrawn"];
-
-// Legacy/generic "interview" ranks alongside the technical-interview step.
-function rankOf(s: AppStatus): number {
-  if (s === "interview") return PIPELINE.indexOf("technical_interview");
-  return PIPELINE.indexOf(s);
-}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
