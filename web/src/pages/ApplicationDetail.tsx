@@ -334,7 +334,7 @@ function Timeline({ app, onChange }: { app: Application; onChange: () => void })
         <p className="muted">{t("detail.noEvents")}</p>
       ) : (
         <ul className="timeline" style={{ marginTop: 14 }}>
-          {app.events.map((e) => (
+          {[...app.events].sort((a, b) => +new Date(b.at) - +new Date(a.at)).map((e) => (
             <li key={e.id} className="timeline-item">
               <span className={`timeline-dot ${e.status}`} />
               {editId === e.id ? (
