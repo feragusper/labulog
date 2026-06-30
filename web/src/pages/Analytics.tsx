@@ -50,23 +50,26 @@ export default function Analytics() {
   // Furthest stage each application ever reached, regardless of outcome.
   const stageOf = new Map<number, AppStatus>(list.map((a) => [a.id, furthestStage(a)]));
 
-  // Funnel: how many apps reached AT LEAST each pipeline stage.
-  const stageFunnel = PIPELINE.map((stage) => ({
-    stage,
-    count: list.filter((a) => rankOf(stageOf.get(a.id)!) >= rankOf(stage)).length,
-  }));
+  // Funnel stages shown (skip "saved": pre-application, not a pipeline step).
+  const funnelStages = PIPELINE.filter((s) => s !== "saved");
+  const baseline = list.filter((a) => rankOf(stageOf.get(a.id)!) >= rankOf(funnelStages[0])).length;
 
-  // Of the apps that didn't make it, where (which stage) and how (which outcome) did they close.
-  const outcomeByStage = PIPELINE
-    .map((stage) => {
-      const atStage = list.filter((a) => stageOf.get(a.id) === stage && NEGATIVE_TERMINAL.includes(a.status));
-      return {
-        stage,
-        total: atStage.length,
-        byOutcome: NEGATIVE_TERMINAL.map((o) => ({ outcome: o, count: atStage.filter((a) => a.status === o).length })),
-      };
-    })
-    .filter((row) => row.total > 0);
+  const stageFunnel = funnelStages.map((stage, i) => {
+    const count = list.filter((a) => rankOf(stageOf.get(a.id)!) >= rankOf(stage)).length;
+    const prevCount = i === 0 ? count : list.filter((a) => rankOf(stageOf.get(a.id)!) >= rankOf(funnelStages[i - 1])).length;
+    const atStage = list.filter((a) => stageOf.get(a.id) === stage && NEGATIVE_TERMINAL.includes(a.status));
+    const accepted = stage === "offer" ? list.filter((a) => a.status === "accepted").length : 0;
+    return {
+      stage,
+      count,
+      pctOfBaseline: baseline ? count / baseline : 0,
+      pctOfPrev: i > 0 && prevCount ? count / prevCount : null,
+      lost: atStage.length,
+      lostByOutcome: NEGATIVE_TERMINAL.map((o) => ({ outcome: o, count: atStage.filter((a) => a.status === o).length }))
+        .filter((o) => o.count > 0),
+      accepted,
+    };
+  });
 
   return (
     <div>
@@ -103,6 +106,52 @@ export default function Analytics() {
       )}
 
       <div className="panel">
+        <h2>{t("overview.funnelTitle")}</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>{t("overview.funnelHint")}</p>
+        {!baseline ? (
+          <p className="muted">{t("overview.emptyFunnel")}</p>
+        ) : (
+          <>
+            <div className="funnel">
+              {stageFunnel.map(({ stage, count, pctOfBaseline, pctOfPrev, lost, lostByOutcome, accepted }, i) => (
+                <div key={stage} className="funnel-stage">
+                  <div
+                    className={`funnel-bar status-bar-fill ${stage}`}
+                    style={{ width: `${Math.max(pctOfBaseline * 100, 14)}%` }}
+                  >
+                    <span className="funnel-bar-label">{statusLabel(t, stage)}</span>
+                    <span className="funnel-bar-count">{count}</span>
+                  </div>
+                  <div className="funnel-meta muted">
+                    {pct(pctOfBaseline)} {t("overview.ofTotal")}
+                    {pctOfPrev !== null && ` · ${pct(pctOfPrev)} ${t("overview.vsPrevStage")}`}
+                  </div>
+
+                  {accepted > 0 && (
+                    <div className="funnel-drop funnel-drop-positive">
+                      <span className="legend-dot out-accepted" /> {accepted} {t("overview.acceptedHere")}
+                    </div>
+                  )}
+                  {lost > 0 && (
+                    <div className="funnel-drop">
+                      <span>−{lost} {t("overview.closedHere")}:</span>
+                      {lostByOutcome.map(({ outcome, count: c }) => (
+                        <span key={outcome} className="legend-item">
+                          <span className={`legend-dot ${OUTCOME_CLASS[outcome]}`} />
+                          {statusLabel(t, outcome)} ({c})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {i < stageFunnel.length - 1 && <div className="funnel-arrow">↓</div>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="panel">
         <h2>{t("overview.byStatus")}</h2>
         {!f || f.total === 0 ? (
           <p className="muted">{t("overview.emptyFunnel")}</p>
@@ -125,62 +174,6 @@ export default function Analytics() {
           </div>
         )}
       </div>
-
-      <div className="panel">
-        <h2>{t("overview.stageFunnel")}</h2>
-        <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>{t("overview.stageFunnelHint")}</p>
-        {!list.length ? (
-          <p className="muted">{t("overview.emptyFunnel")}</p>
-        ) : (
-          <div className="status-bars">
-            {stageFunnel.map(({ stage, count }) => (
-              <div key={stage} className="status-bar-row">
-                <div className="status-bar-label"><Badge status={stage} /></div>
-                <div className="status-bar-track">
-                  <div
-                    className={`status-bar-fill ${stage}`}
-                    style={{ width: `${(count / list.length) * 100}%` }}
-                  />
-                </div>
-                <div className="status-bar-count muted">{count}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {outcomeByStage.length > 0 && (
-        <div className="panel">
-          <h2>{t("overview.outcomeByStage")}</h2>
-          <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>{t("overview.outcomeByStageHint")}</p>
-          <div className="status-bars">
-            {outcomeByStage.map(({ stage, total, byOutcome }) => (
-              <div key={stage} className="status-bar-row">
-                <div className="status-bar-label"><Badge status={stage} /></div>
-                <div className="status-bar-track" style={{ display: "flex" }}>
-                  {byOutcome.filter((o) => o.count > 0).map(({ outcome, count }) => (
-                    <div
-                      key={outcome}
-                      className={`status-bar-fill ${OUTCOME_CLASS[outcome]}`}
-                      style={{ width: `${(count / total) * 100}%` }}
-                      title={`${statusLabel(t, outcome)}: ${count}`}
-                    />
-                  ))}
-                </div>
-                <div className="status-bar-count muted">{total}</div>
-              </div>
-            ))}
-          </div>
-          <div className="legend" style={{ marginTop: 12 }}>
-            {NEGATIVE_TERMINAL.map((o) => (
-              <span key={o} className="legend-item">
-                <span className={`legend-dot ${OUTCOME_CLASS[o]}`} />
-                {statusLabel(t, o)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

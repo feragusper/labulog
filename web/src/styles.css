@@ -113,6 +113,25 @@ a { color: var(--accent); }
 .legend-dot.out-ghosted { background: var(--muted); }
 .legend-dot.out-cancelled { background: var(--yellow); }
 .legend-dot.out-withdrawn { background: var(--accent); }
+.legend-dot.out-accepted { background: var(--green); }
+
+/* ---- pipeline funnel (overview) ---- */
+.funnel { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.funnel-stage { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.funnel-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-width: 160px; max-width: 100%; padding: 10px 18px; border-radius: 8px;
+  color: #fff; font-size: 14px; transition: width 0.2s;
+}
+.funnel-bar-label { font-weight: 600; text-transform: capitalize; }
+.funnel-bar-count { font-weight: 700; }
+.funnel-meta { font-size: 12px; margin-top: 4px; }
+.funnel-drop {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 8px; font-size: 12px; color: var(--muted); margin-top: 6px;
+}
+.funnel-drop-positive { color: var(--green); }
+.funnel-arrow { color: var(--border); font-size: 16px; margin: 6px 0; }
 
 @media (max-width: 720px) {
   .app-shell { flex-direction: column; }
