@@ -58,6 +58,12 @@ export default function ApplicationDetail() {
     onSuccess: () => { invalidate(); navigate("/applications"); },
   });
 
+  const decide = useMutation({
+    mutationFn: (status: AppStatus) =>
+      api.addEvent(appId, { status, at: new Date().toISOString(), set_current: true }),
+    onSuccess: invalidate,
+  });
+
   const [editing, setEditing] = useState(false);
 
   if (q.isLoading) return <div className="muted">{t("common.loading")}</div>;
@@ -129,6 +135,14 @@ export default function ApplicationDetail() {
         </div>
         {terminal && (
           <div style={{ marginTop: 12 }}>{t("detail.finalResult")} <Badge status={terminal} /></div>
+        )}
+        {!terminal && app.status === "offer" && (
+          <div className="row" style={{ marginTop: 12, alignItems: "center" }}>
+            <span className="muted" style={{ fontSize: 13 }}>{t("detail.offerDecision")}</span>
+            <div style={{ flex: 1 }} />
+            <button className="shrink" onClick={() => decide.mutate("accepted")}>{t("detail.acceptOffer")}</button>
+            <button className="shrink danger" onClick={() => decide.mutate("rejected")}>{t("detail.rejectOffer")}</button>
+          </div>
         )}
       </div>
 
