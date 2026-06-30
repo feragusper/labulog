@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
+import { FunnelChart, PieChart } from "../components/Charts";
 import {
-  Badge, furthestStage, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, NEGATIVE_TERMINAL,
-  pct, PIPELINE, rankOf, statusLabel,
+  Badge, CardsSkeleton, furthestStage, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, NEGATIVE_TERMINAL,
+  PanelSkeleton, pct, PIPELINE, rankOf, statusLabel, TERMINAL,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -30,6 +31,7 @@ function processDays(a: Application): number | null {
 
 export default function Analytics() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const funnel = useQuery({ queryKey: ["funnel"], queryFn: api.funnel });
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
   const f = funnel.data;
@@ -71,24 +73,37 @@ export default function Analytics() {
     };
   });
 
+  const outcomeData = TERMINAL
+    .map((status) => ({ status, count: list.filter((a) => a.status === status).length }))
+    .filter((d) => d.count > 0);
+
+  const goToStage = (stage: AppStatus) => navigate(`/applications?minStage=${stage}`);
+  const goToOutcomeAtStage = (status: AppStatus, stage: AppStatus) =>
+    navigate(`/applications?status=${status}&stage=${stage}`);
+  const goToStatus = (status: AppStatus) => navigate(`/applications?status=${status}`);
+
   return (
     <div>
       <h1 className="page-title">{t("analytics.title")}</h1>
 
-      <div className="grid cards">
-        <Card label={t("overview.applications")} value={f?.total ?? "—"} />
-        <Card label={t("overview.responseRate")} value={f ? pct(f.response_rate) : "—"} />
-        <Card label={t("overview.interviewRate")} value={f ? pct(f.interview_rate) : "—"} />
-        <Card label={t("overview.offers")} value={f ? f.by_status.offer + f.by_status.accepted : "—"} />
-        <Card label={t("overview.ghosted")} value={f?.ghost_count ?? "—"} />
-      </div>
+      {!f ? <CardsSkeleton /> : (
+        <div className="grid cards">
+          <Card label={t("overview.applications")} value={f.total} />
+          <Card label={t("overview.responseRate")} value={pct(f.response_rate)} />
+          <Card label={t("overview.interviewRate")} value={pct(f.interview_rate)} />
+          <Card label={t("overview.offers")} value={f.by_status.offer + f.by_status.accepted} />
+          <Card label={t("overview.ghosted")} value={f.ghost_count} />
+        </div>
+      )}
 
-      <div className="grid cards" style={{ marginTop: 16 }}>
-        <Card label={t("overview.interviewRounds")} value={apps.isLoading ? "—" : interviewRounds} />
-        <Card label={t("overview.interviewHours")} value={apps.isLoading ? "—" : `~${interviewHours} h`} />
-        <Card label={t("overview.avgProcess")} value={avgProcess !== null ? `${avgProcess} d` : "—"} />
-        <Card label={t("overview.dueFollowups")} value={apps.isLoading ? "—" : due.length} />
-      </div>
+      {apps.isLoading ? <CardsSkeleton /> : (
+        <div className="grid cards" style={{ marginTop: 16 }}>
+          <Card label={t("overview.interviewRounds")} value={interviewRounds} />
+          <Card label={t("overview.interviewHours")} value={`~${interviewHours} h`} />
+          <Card label={t("overview.avgProcess")} value={avgProcess !== null ? `${avgProcess} d` : "—"} />
+          <Card label={t("overview.dueFollowups")} value={due.length} />
+        </div>
+      )}
 
       {due.length > 0 && (
         <div className="panel">
@@ -108,42 +123,39 @@ export default function Analytics() {
       <div className="panel">
         <h2>{t("overview.funnelTitle")}</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>{t("overview.funnelHint")}</p>
-        {!baseline ? (
+        {apps.isLoading ? <PanelSkeleton rows={5} /> : !baseline ? (
           <p className="muted">{t("overview.emptyFunnel")}</p>
         ) : (
           <>
-            <div className="funnel">
-              {stageFunnel.map(({ stage, count, pctOfBaseline, pctOfPrev, lost, lostByOutcome, accepted }, i) => (
-                <div key={stage} className="funnel-stage">
-                  <div
-                    className={`funnel-bar status-bar-fill ${stage}`}
-                    style={{ width: `${Math.max(pctOfBaseline * 100, 14)}%` }}
-                  >
-                    <span className="funnel-bar-label">{statusLabel(t, stage)}</span>
-                    <span className="funnel-bar-count">{count}</span>
-                  </div>
-                  <div className="funnel-meta muted">
-                    {pct(pctOfBaseline)} {t("overview.ofTotal")}
-                    {pctOfPrev !== null && ` · ${pct(pctOfPrev)} ${t("overview.vsPrevStage")}`}
-                  </div>
+            <FunnelChart stages={stageFunnel} onClickStage={goToStage} />
+
+            <div className="funnel-details">
+              {stageFunnel.map(({ stage, pctOfBaseline, pctOfPrev, lost, lostByOutcome, accepted }) => (
+                <div key={stage} className="funnel-detail-row">
+                  <button className="tag-btn funnel-detail-stage" onClick={() => goToStage(stage)}>
+                    <Badge status={stage} />
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      {pct(pctOfBaseline)} {t("overview.ofTotal")}
+                      {pctOfPrev !== null && ` · ${pct(pctOfPrev)} ${t("overview.vsPrevStage")}`}
+                    </span>
+                  </button>
 
                   {accepted > 0 && (
-                    <div className="funnel-drop funnel-drop-positive">
+                    <button className="tag-btn funnel-drop-positive" onClick={() => goToOutcomeAtStage("accepted", "offer")}>
                       <span className="legend-dot out-accepted" /> {accepted} {t("overview.acceptedHere")}
-                    </div>
+                    </button>
                   )}
                   {lost > 0 && (
                     <div className="funnel-drop">
-                      <span>−{lost} {t("overview.closedHere")}:</span>
+                      <span className="muted">−{lost} {t("overview.closedHere")}:</span>
                       {lostByOutcome.map(({ outcome, count: c }) => (
-                        <span key={outcome} className="legend-item">
+                        <button key={outcome} className="tag-btn legend-item" onClick={() => goToOutcomeAtStage(outcome, stage)}>
                           <span className={`legend-dot ${OUTCOME_CLASS[outcome]}`} />
                           {statusLabel(t, outcome)} ({c})
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}
-                  {i < stageFunnel.length - 1 && <div className="funnel-arrow">↓</div>}
                 </div>
               ))}
             </div>
@@ -153,25 +165,10 @@ export default function Analytics() {
 
       <div className="panel">
         <h2>{t("overview.byStatus")}</h2>
-        {!f || f.total === 0 ? (
+        {apps.isLoading ? <PanelSkeleton rows={3} /> : outcomeData.length === 0 ? (
           <p className="muted">{t("overview.emptyFunnel")}</p>
         ) : (
-          <div className="status-bars">
-            {(Object.keys(f.by_status) as AppStatus[])
-              .filter((s) => f.by_status[s] > 0)
-              .map((s) => (
-                <div key={s} className="status-bar-row">
-                  <div className="status-bar-label"><Badge status={s} /></div>
-                  <div className="status-bar-track">
-                    <div
-                      className={`status-bar-fill ${s}`}
-                      style={{ width: `${(f.by_status[s] / f.total) * 100}%` }}
-                    />
-                  </div>
-                  <div className="status-bar-count muted">{f.by_status[s]}</div>
-                </div>
-              ))}
-          </div>
+          <PieChart data={outcomeData} onClickSlice={goToStatus} />
         )}
       </div>
     </div>

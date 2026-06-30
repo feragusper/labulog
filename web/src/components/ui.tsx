@@ -38,6 +38,15 @@ export function statusColorClass(s: AppStatus): string {
   return "c-red"; // rejected, cancelled, ghosted, withdrawn
 }
 
+const COLOR_VAR: Record<string, string> = {
+  "c-muted": "var(--muted)", "c-accent": "var(--accent)",
+  "c-yellow": "var(--yellow)", "c-green": "var(--green)", "c-red": "var(--red)",
+};
+// Same colour grouping as statusColorClass, as a CSS color for SVG fills etc.
+export function statusFillVar(s: AppStatus): string {
+  return COLOR_VAR[statusColorClass(s)];
+}
+
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 // Every status that represents an interview round (legacy + granular).
@@ -65,3 +74,45 @@ export function pct(n: number) {
 
 // No real interview durations are tracked; estimate total time from round count.
 export const HOURS_PER_INTERVIEW = 1;
+
+export function Skeleton({ w = "100%", h = 14, style }: { w?: number | string; h?: number | string; style?: React.CSSProperties }) {
+  return <div className="skeleton" style={{ width: w, height: h, ...style }} />;
+}
+
+export function CardsSkeleton({ n = 4 }: { n?: number }) {
+  return (
+    <div className="grid cards">
+      {Array.from({ length: n }).map((_, i) => (
+        <div className="card" key={i}>
+          <Skeleton w={70} h={11} style={{ marginBottom: 10 }} />
+          <Skeleton w={46} h={22} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PanelSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="panel">
+      <Skeleton w={140} h={16} style={{ marginBottom: 16 }} />
+      <div style={{ display: "grid", gap: 12 }}>
+        {Array.from({ length: rows }).map((_, i) => <Skeleton key={i} h={14} />)}
+      </div>
+    </div>
+  );
+}
+
+export function TableSkeleton({ rows = 6, cols = 6 }: { rows?: number; cols?: number }) {
+  return (
+    <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} style={{ display: "flex", gap: 16 }}>
+          {Array.from({ length: cols }).map((_, j) => (
+            <Skeleton key={j} h={14} w={j === 0 ? "22%" : `${100 / cols}%`} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
-import { Badge } from "../components/ui";
+import { Badge, CardsSkeleton, TableSkeleton } from "../components/ui";
 import { flag } from "../countries";
 import { useI18n } from "../i18n";
 
@@ -36,15 +36,17 @@ export default function Overview() {
         <Link to="/analytics" className="muted" style={{ fontSize: 13 }}>{t("home.seeAnalytics")} →</Link>
       </div>
 
-      <div className="grid cards" style={{ marginTop: 16 }}>
-        <Card label={t("home.inProgress")} value={apps.isLoading ? "—" : active.length} />
-        <Card label={t("overview.offers")} value={apps.isLoading ? "—" : offers} />
-        <Card label={t("overview.dueFollowups")} value={apps.isLoading ? "—" : due} />
-      </div>
+      {apps.isLoading ? <CardsSkeleton n={3} /> : (
+        <div className="grid cards" style={{ marginTop: 16 }}>
+          <Card label={t("home.inProgress")} value={active.length} />
+          <Card label={t("overview.offers")} value={offers} />
+          <Card label={t("overview.dueFollowups")} value={due} />
+        </div>
+      )}
 
       <div className="panel">
         <h2>{t("home.inProgress")}</h2>
-        {apps.isLoading && <p className="muted">{t("common.loading")}</p>}
+        {apps.isLoading && <TableSkeleton rows={5} cols={3} />}
         {!apps.isLoading && active.length === 0 && <p className="muted">{t("home.noActive")}</p>}
         {active.length > 0 && (
           <table>

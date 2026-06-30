@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
-import { Badge, PriorityBadge, PRIORITIES, STATUSES, statusColorClass, statusLabel } from "../components/ui";
+import {
+  Badge, furthestStage, PriorityBadge, PRIORITIES, rankOf, STATUSES,
+  statusColorClass, statusLabel, TableSkeleton,
+} from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
 import { flag, toCountryCode } from "../countries";
 import { useI18n } from "../i18n";
@@ -34,13 +37,31 @@ export default function Applications() {
   const qc = useQueryClient();
   const apps = useQuery({ queryKey: ["applications"], queryFn: api.listApplications });
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stageParam = searchParams.get("stage") as AppStatus | null;
+  const minStageParam = searchParams.get("minStage") as AppStatus | null;
+
   const [view, setView] = useState<"list" | "board">("list");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | AppStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | AppStatus>(
+    (searchParams.get("status") as AppStatus) || "all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | Priority>("all");
   const [hideClosed, setHideClosed] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("applied");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Sync the status dropdown when navigated here again with a different ?status= (no remount).
+  useEffect(() => {
+    const sp = searchParams.get("status") as AppStatus | null;
+    if (sp) { setStatusFilter(sp); setView("list"); }
+  }, [searchParams]);
+
+  const clearStageFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("stage"); next.delete("minStage"); next.delete("status");
+    setSearchParams(next);
+    setStatusFilter("all");
+  };
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["applications"] });
@@ -65,8 +86,10 @@ export default function Applications() {
       (a.posting.company_name ?? "").toLowerCase().includes(q));
     if (priorityFilter !== "all") list = list.filter((a) => a.priority === priorityFilter);
     if (hideClosed) list = list.filter((a) => !isClosed(a));
+    if (stageParam) list = list.filter((a) => furthestStage(a) === stageParam);
+    if (minStageParam) list = list.filter((a) => rankOf(furthestStage(a)) >= rankOf(minStageParam));
     return list;
-  }, [apps.data, search, priorityFilter, hideClosed]);
+  }, [apps.data, search, priorityFilter, hideClosed, stageParam, minStageParam]);
 
   const rows = useMemo(() => {
     let list = statusFilter !== "all" ? filtered.filter((a) => a.status === statusFilter) : filtered;
@@ -104,6 +127,15 @@ export default function Applications() {
 
       <AddApplication onAdded={invalidate} />
 
+      {(stageParam || minStageParam) && (
+        <div className="active-filter-chip">
+          {t("apps.filteredFrom")}
+          {stageParam && <Badge status={stageParam} />}
+          {minStageParam && <span>{t("apps.atLeast")} <Badge status={minStageParam} /></span>}
+          <button className="link-btn" onClick={clearStageFilters}>{t("apps.clearFilter")}</button>
+        </div>
+      )}
+
       <div className="panel">
         <div className="filters">
           <input placeholder={t("apps.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -124,7 +156,7 @@ export default function Applications() {
           <span className="muted" style={{ fontSize: 13 }}>{filtered.length} {t("common.results")}</span>
         </div>
 
-        {apps.isLoading && <p className="muted">{t("common.loading")}</p>}
+        {apps.isLoading && <TableSkeleton />}
         {apps.data && apps.data.length === 0 && <p className="muted">{t("apps.empty")}</p>}
 
         {apps.data && apps.data.length > 0 && view === "list" && (

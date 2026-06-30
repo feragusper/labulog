@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import {
-  Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PIPELINE, PriorityBadge, PRIORITIES,
-  rankOf, STATUSES, statusLabel, TERMINAL,
+  Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PanelSkeleton, PIPELINE, PriorityBadge, PRIORITIES,
+  rankOf, Skeleton, STATUSES, statusLabel, TERMINAL,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
 import { countryDisplay } from "../countries";
@@ -57,7 +57,15 @@ export default function ApplicationDetail() {
 
   const [editing, setEditing] = useState(false);
 
-  if (q.isLoading) return <div className="muted">{t("common.loading")}</div>;
+  if (q.isLoading) return (
+    <div>
+      <Skeleton w={220} h={20} style={{ marginBottom: 8 }} />
+      <Skeleton w={320} h={28} style={{ marginBottom: 18 }} />
+      <PanelSkeleton rows={5} />
+      <PanelSkeleton rows={3} />
+      <PanelSkeleton rows={4} />
+    </div>
+  );
   if (q.isError || !q.data) return <div className="error">{t("detail.notFound")}</div>;
 
   const app = q.data;

@@ -80,14 +80,8 @@ a { color: var(--accent); }
 }
 .collapse-btn:hover { color: var(--text); }
 .app-shell.collapsed .sidebar { width: 62px; padding: 18px 10px; }
-.app-shell.collapsed .sidebar-brand,
-.app-shell.collapsed .nav-item span:not(.nav-icon),
-.app-shell.collapsed .sidebar-user { display: none; }
 .app-shell.collapsed .sidebar-top { justify-content: center; padding: 6px 0 18px; }
 .app-shell.collapsed .nav-item { justify-content: center; padding: 9px 0; }
-.app-shell.collapsed .sidebar-foot .logout-label { display: none; }
-.logout-icon { display: none; }
-.app-shell.collapsed .logout-icon { display: inline; }
 
 /* ---- status bars (overview) ---- */
 .status-bars { display: grid; gap: 10px; }
@@ -115,23 +109,19 @@ a { color: var(--accent); }
 .legend-dot.out-withdrawn { background: var(--accent); }
 .legend-dot.out-accepted { background: var(--green); }
 
-/* ---- pipeline funnel (overview) ---- */
-.funnel { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.funnel-stage { display: flex; flex-direction: column; align-items: center; width: 100%; }
-.funnel-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  min-width: 160px; max-width: 100%; padding: 10px 18px; border-radius: 8px;
-  color: #fff; font-size: 14px; transition: width 0.2s;
+/* ---- pipeline funnel detail rows (below the SVG funnel) ---- */
+.funnel-details { display: grid; gap: 14px; margin-top: 18px; }
+.funnel-detail-row {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
 }
-.funnel-bar-label { font-weight: 600; text-transform: capitalize; }
-.funnel-bar-count { font-weight: 700; }
-.funnel-meta { font-size: 12px; margin-top: 4px; }
+.funnel-detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+.funnel-detail-stage { flex-direction: column; gap: 2px; }
 .funnel-drop {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  gap: 8px; font-size: 12px; color: var(--muted); margin-top: 6px;
+  gap: 8px; font-size: 12px; color: var(--muted);
 }
 .funnel-drop-positive { color: var(--green); }
-.funnel-arrow { color: var(--border); font-size: 16px; margin: 6px 0; }
 
 @media (max-width: 720px) {
   .app-shell { flex-direction: column; }
@@ -356,3 +346,86 @@ th.sortable:hover { color: var(--text); }
   margin-top: 12px; padding: 12px; border-radius: 8px;
   background: var(--panel-2); border: 1px solid var(--border);
 }
+
+/* ---- loading skeletons ---- */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.skeleton {
+  border-radius: 6px; background: var(--panel-2);
+  background-image: linear-gradient(90deg, var(--panel-2) 0px, var(--border) 80px, var(--panel-2) 160px);
+  background-size: 600px 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ---- sidebar collapse animation ---- */
+.sidebar { transition: width .22s ease, padding .22s ease; }
+.sidebar-brand {
+  opacity: 1; max-width: 160px; overflow: hidden; white-space: nowrap;
+  transition: opacity .15s ease, max-width .2s ease;
+}
+.app-shell.collapsed .sidebar-brand { opacity: 0; max-width: 0; }
+.nav-item span:not(.nav-icon) {
+  display: inline-block; opacity: 1; max-width: 160px; overflow: hidden; white-space: nowrap;
+  transition: opacity .15s ease, max-width .2s ease;
+}
+.app-shell.collapsed .nav-item span:not(.nav-icon) { opacity: 0; max-width: 0; }
+.sidebar-user {
+  opacity: 1; max-height: 40px; overflow: hidden;
+  transition: opacity .15s ease, max-height .2s ease;
+}
+.app-shell.collapsed .sidebar-user { opacity: 0; max-height: 0; }
+.logout-label {
+  display: inline-block; opacity: 1; max-width: 160px; overflow: hidden; white-space: nowrap;
+  transition: opacity .15s ease, max-width .2s ease;
+}
+.app-shell.collapsed .logout-label { opacity: 0; max-width: 0; }
+.logout-icon {
+  display: inline-block; opacity: 0; width: 0; overflow: hidden;
+  transition: opacity .15s ease, width .15s ease;
+}
+.app-shell.collapsed .logout-icon { opacity: 1; width: 1em; }
+.nav-item, .collapse-btn { transition: background .12s, color .12s, justify-content .15s, padding .15s; }
+
+/* ---- trapezoid funnel chart ---- */
+@keyframes funnel-pop {
+  from { opacity: 0; transform: scaleY(.4); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+.funnel-svg-wrap { width: 100%; max-width: 460px; margin: 0 auto; }
+.funnel-segment { cursor: pointer; transform-origin: center; animation: funnel-pop .35s ease backwards; }
+.funnel-segment polygon { transition: filter .15s ease; }
+.funnel-segment:hover polygon { filter: brightness(1.1); }
+.funnel-seg-label { font-size: 13px; font-weight: 600; fill: #fff; text-anchor: middle; pointer-events: none; }
+.funnel-seg-count { font-size: 12px; fill: rgba(255,255,255,0.85); text-anchor: middle; pointer-events: none; }
+
+/* ---- pie chart ---- */
+.pie-wrap { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; justify-content: center; }
+.pie-slice { cursor: pointer; transition: stroke-dashoffset 1s cubic-bezier(.22,1,.36,1), opacity .15s ease; }
+.pie-slice:hover { opacity: .8; }
+.pie-center-value { font-size: 22px; font-weight: 700; fill: var(--text); text-anchor: middle; }
+.pie-center-label { font-size: 11px; fill: var(--muted); text-anchor: middle; }
+.pie-legend { display: grid; gap: 8px; }
+.pie-legend-item {
+  display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;
+  background: none; border: none; padding: 2px 0; color: var(--text); text-align: left;
+}
+.pie-legend-item:hover { color: var(--accent); }
+.pie-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend-count { color: var(--muted); margin-left: auto; padding-left: 12px; }
+
+/* ---- clickable funnel drop-off tags ---- */
+.tag-btn {
+  background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; color: inherit;
+}
+.tag-btn:hover { text-decoration: underline; }
+
+/* ---- active filter chip (drill-down from analytics) ---- */
+.active-filter-chip {
+  display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted);
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 14px; margin-bottom: 14px;
+}
+.active-filter-chip .link-btn { margin-left: auto; }
