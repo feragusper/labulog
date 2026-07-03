@@ -3,8 +3,9 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import {
-  Badge, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PanelSkeleton, PIPELINE, PriorityBadge, PRIORITIES,
-  rankOf, Skeleton, STATUSES, statusLabel, TERMINAL,
+  Badge, commitmentLabel, COMMITMENTS, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PanelSkeleton,
+  PIPELINE, PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS,
+  Skeleton, STATUSES, statusLabel, TERMINAL,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
 import { countryDisplay } from "../countries";
@@ -100,10 +101,9 @@ export default function ApplicationDetail() {
               <Meta label={t("detail.followup")}>{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
               <Meta label={t("form.country")}>{countryDisplay(p.country)}</Meta>
               <Meta label={t("form.industry")}>{p.industry ?? "—"}</Meta>
+              <Meta label={t("form.commitment")}>{p.commitment ? commitmentLabel(t, p.commitment) : "—"}</Meta>
               <Meta label={t("detail.source")}>{p.source ?? "—"}</Meta>
-              <Meta label={t("detail.salary")}>
-                {p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}
-              </Meta>
+              <Meta label={t("detail.salary")}>{salaryDisplay(p)}</Meta>
             </div>
             {p.url && !p.url.startsWith("imported://") && (
               <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>{t("detail.viewPosting")}</a>
@@ -189,6 +189,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
   const [f, setF] = useState({
     title: p.title, company_name: p.company_name ?? "",
     country: p.country ?? "", industry: p.industry ?? "",
+    commitment: p.commitment ?? "full-time", salary_period: p.salary_period ?? "yearly",
     source: p.source ?? "", salary_min: p.salary_min?.toString() ?? "",
     salary_max: p.salary_max?.toString() ?? "", currency: p.currency ?? "",
     status: app.status, applied_at: toDateInput(app.applied_at), notes: app.notes ?? "",
@@ -201,6 +202,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
       await api.updatePosting(p.id, {
         title: f.title, company_name: f.company_name || null,
         country: f.country || null, industry: f.industry || null,
+        commitment: f.commitment || null, salary_period: f.salary_period || null,
         source: f.source || null, currency: f.currency || null,
         salary_min: f.salary_min ? Number(f.salary_min) : null,
         salary_max: f.salary_max ? Number(f.salary_max) : null,
@@ -225,10 +227,22 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
         <div><label>{t("detail.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
         <div><label>{t("form.industry")}</label><input value={f.industry} onChange={set("industry")} /></div>
+        <div>
+          <label>{t("form.commitment")}</label>
+          <select value={f.commitment} onChange={set("commitment")}>
+            {COMMITMENTS.map((c) => <option key={c} value={c}>{commitmentLabel(t, c)}</option>)}
+          </select>
+        </div>
         <div><label>{t("detail.source")}</label><input value={f.source} onChange={set("source")} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
         <div><label>{t("form.currency")}</label><input value={f.currency} onChange={set("currency")} /></div>
+        <div>
+          <label>{t("form.salaryPeriod")}</label>
+          <select value={f.salary_period} onChange={set("salary_period")}>
+            {SALARY_PERIODS.map((sp) => <option key={sp} value={sp}>{salaryPeriodLabel(t, sp)}</option>)}
+          </select>
+        </div>
         <div><label>{t("detail.applied")}</label><input type="date" value={f.applied_at} onChange={set("applied_at")} /></div>
         <div>
           <label>{t("detail.statusCurrent")}</label>

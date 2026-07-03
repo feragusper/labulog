@@ -55,6 +55,30 @@ export function statusFillVar(s: AppStatus): string {
 
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
+export const COMMITMENTS = ["full-time", "part-time", "hourly", "mixed"] as const;
+export const SALARY_PERIODS = ["yearly", "monthly", "hourly"] as const;
+
+export function commitmentLabel(t: (k: string) => string, v: string): string {
+  return t(`commitment.${v}`);
+}
+export function salaryPeriodLabel(t: (k: string) => string, v: string): string {
+  return t(`salaryPeriod.${v}`);
+}
+
+// Compact salary + period, e.g. "USD30-60/h", "EUR3000-5000/m", "EUR50000/y".
+export function salaryDisplay(p: {
+  salary_min: number | null; salary_max: number | null;
+  currency: string | null; salary_period: string | null;
+}): string {
+  if (p.salary_min == null && p.salary_max == null) return "—";
+  const cur = p.currency ?? "";
+  const range = (p.salary_min != null && p.salary_max != null && p.salary_max !== p.salary_min)
+    ? `${p.salary_min}-${p.salary_max}`
+    : `${p.salary_min ?? p.salary_max}`;
+  const suffix = p.salary_period === "hourly" ? "/h" : p.salary_period === "monthly" ? "/m" : "/y";
+  return `${cur}${range}${suffix}`;
+}
+
 // Every status that represents an interview round (legacy + granular).
 export const INTERVIEW_STATUSES: AppStatus[] = [
   "interview", "technical_interview", "manager_interview",

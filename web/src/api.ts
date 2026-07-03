@@ -60,6 +60,8 @@ export interface Posting {
   remote: string | null;
   seniority: string | null;
   industry: string | null;
+  commitment: string | null;
+  salary_period: string | null;
   salary_min: number | null;
   salary_max: number | null;
   currency: string | null;
@@ -225,6 +227,8 @@ export interface PendingPosting {
   location: string | null;
   country: string | null;
   industry: string | null;
+  commitment: string | null;
+  salary_period: string | null;
   salary_min: number | null;
   salary_max: number | null;
   currency: string | null;

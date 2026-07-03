@@ -39,6 +39,8 @@ class PendingPosting(BaseModel):
     location: Optional[str] = None
     country: Optional[str] = None
     industry: Optional[str] = None
+    commitment: Optional[str] = None
+    salary_period: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None
@@ -290,6 +292,9 @@ FIELD_ALIASES: Dict[str, List[str]] = {
     "location": ["location", "ubicacion", "ciudad", "city"],
     "country": ["country", "pais"],
     "industry": ["industry", "industria", "sector", "rubro"],
+    "commitment": ["commitment", "dedicacion", "jornada", "compromiso", "tipojornada"],
+    "salary_period": ["salaryperiod", "tiposalario", "tipodesalario", "periodo",
+                      "periodicidad", "periodosalario"],
     "notes": ["notes", "notas", "note", "nota", "comentarios", "comments",
               "result", "resultado"],
 }
@@ -390,6 +395,32 @@ def _parse_priority(value: Optional[str]) -> Optional[Priority]:
         if token in key:
             return prio
     return None
+
+
+def _parse_commitment(value: Optional[str]) -> str:
+    """part-time | hourly | mixed | full-time. Blank/unknown -> full-time; 'All' -> mixed."""
+    key = _norm_key(value or "")
+    if not key:
+        return "full-time"
+    if "part" in key or "medio" in key:
+        return "part-time"
+    if "hour" in key or "hora" in key:
+        return "hourly"
+    if key == "all" or "mix" in key:
+        return "mixed"
+    return "full-time"
+
+
+def _parse_salary_period(value: Optional[str]) -> str:
+    """hourly | monthly | yearly. Blank/unknown -> yearly (the default)."""
+    key = _norm_key(value or "")
+    if not key:
+        return "yearly"
+    if "hour" in key or "hora" in key or key in ("h", "hr"):
+        return "hourly"
+    if "month" in key or "mens" in key or key in ("m", "mes"):
+        return "monthly"
+    return "yearly"
 
 
 def _parse_int(value: Optional[str]) -> Optional[int]:
@@ -511,12 +542,15 @@ async def import_applications(
             location = _cell(row, header_map, "location")
             country = _cell(row, header_map, "country")
             industry = _cell(row, header_map, "industry")
+            commitment = _parse_commitment(_cell(row, header_map, "commitment"))
+            salary_period = _parse_salary_period(_cell(row, header_map, "salary_period"))
             currency = _cell(row, header_map, "currency")
             source = _cell(row, header_map, "source") or "import"
 
             posting = upsert_posting(session, PostingCreate(
                 url=url, title=title, company_name=company,
                 location=location, country=country, industry=industry,
+                commitment=commitment, salary_period=salary_period,
                 salary_min=salary_min, salary_max=salary_max,
                 currency=currency, source=source,
             ))
@@ -536,6 +570,7 @@ async def import_applications(
                     posting=PendingPosting(
                         url=url, title=title, company_name=company,
                         location=location, country=country, industry=industry,
+                        commitment=commitment, salary_period=salary_period,
                         salary_min=salary_min, salary_max=salary_max,
                         currency=currency, source=source,
                     ),

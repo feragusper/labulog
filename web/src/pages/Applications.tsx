@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type PendingRow, type Priority } from "../api";
 import {
-  Badge, furthestStage, PriorityBadge, PRIORITIES, rankOf, STATUSES,
+  Badge, commitmentLabel, COMMITMENTS, furthestStage, PriorityBadge, PRIORITIES,
+  rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS, STATUSES,
   statusColorClass, statusLabel, TableSkeleton,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
@@ -18,16 +19,6 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 type SortKey = "company" | "status" | "priority" | "salary" | "applied" | "activity" | "followup";
 type SortDir = "asc" | "desc";
-
-// Options for the sort dropdown: value is "<key>-<dir>", key is an i18n string.
-const SORT_OPTIONS: { v: string; key: string }[] = [
-  { v: "applied-asc", key: "apps.sortAppliedAsc" },
-  { v: "applied-desc", key: "apps.sortAppliedDesc" },
-  { v: "company-asc", key: "apps.sortAz" },
-  { v: "company-desc", key: "apps.sortZa" },
-  { v: "activity-asc", key: "apps.sortActivityAsc" },
-  { v: "activity-desc", key: "apps.sortActivityDesc" },
-];
 
 function lastActivity(a: Application): number {
   const dates = a.events.map((e) => +new Date(e.at));
@@ -188,20 +179,6 @@ export default function Applications() {
             <option value="all">{t("apps.allPriorities")}</option>
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
-          {view === "list" && (
-            <select
-              value={`${sortKey}-${sortDir}`}
-              onChange={(e) => {
-                const [k, d] = e.target.value.split("-");
-                setSortKey(k as SortKey);
-                setSortDir(d as SortDir);
-              }}
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.v} value={o.v}>{t(o.key)}</option>
-              ))}
-            </select>
-          )}
           <label className="check">
             <input type="checkbox" checked={hideClosed} onChange={(e) => setHideClosed(e.target.checked)} />
             {t("apps.hideClosed")}
@@ -371,7 +348,7 @@ function AppRow({ app, selected, onToggleSelect, onStatus }: {
         </select>
       </td>
       <td>{app.priority ? <PriorityBadge priority={app.priority} /> : <span className="muted">—</span>}</td>
-      <td className="muted">{p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}</td>
+      <td className="muted">{salaryDisplay(p)}</td>
       <td className="muted">{fmt(app.applied_at)}</td>
       <td className={isDue(app) ? "due" : "muted"}>{app.follow_up_date ? fmt(app.follow_up_date) : "—"}</td>
     </tr>
@@ -560,6 +537,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
     url: "", title: "", company_name: "", country: "", industry: "", source: "linkedin",
+    commitment: "full-time", salary_period: "yearly",
     salary_min: "", salary_max: "", currency: "USD", notes: "",
     status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
     applied_at: new Date().toISOString().slice(0, 10),
@@ -595,6 +573,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         posting: {
           url: f.url || null, title: f.title, company_name: f.company_name,
           country: f.country || null, industry: f.industry || null, source: f.source || null,
+          commitment: f.commitment || null, salary_period: f.salary_period || null,
           salary_min: f.salary_min ? Number(f.salary_min) : null,
           salary_max: f.salary_max ? Number(f.salary_max) : null,
           currency: f.currency || null,
@@ -650,10 +629,22 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
         <div><label>{t("form.industry")}</label><input value={f.industry} onChange={set("industry")} /></div>
+        <div>
+          <label>{t("form.commitment")}</label>
+          <select value={f.commitment} onChange={set("commitment")}>
+            {COMMITMENTS.map((c) => <option key={c} value={c}>{commitmentLabel(t, c)}</option>)}
+          </select>
+        </div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
-        <div><label>{t("form.source")}</label><input value={f.source} onChange={set("source")} /></div>
         <div><label>{t("form.currency")}</label><input value={f.currency} onChange={set("currency")} /></div>
+        <div>
+          <label>{t("form.salaryPeriod")}</label>
+          <select value={f.salary_period} onChange={set("salary_period")}>
+            {SALARY_PERIODS.map((sp) => <option key={sp} value={sp}>{salaryPeriodLabel(t, sp)}</option>)}
+          </select>
+        </div>
+        <div><label>{t("form.source")}</label><input value={f.source} onChange={set("source")} /></div>
         <div>
           <label>{t("form.initialStatus")}</label>
           <select value={f.status} onChange={set("status")}>
