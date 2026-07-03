@@ -4,14 +4,11 @@ import { api, type AppStatus, type Application } from "../api";
 import { FunnelChart, PieChart } from "../components/Charts";
 import {
   Badge, CardsSkeleton, furthestStage, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, NEGATIVE_TERMINAL,
-  PanelSkeleton, pct, PIPELINE, rankOf, statusLabel, TERMINAL,
+  PanelSkeleton, pct, PIPELINE, rankOf, TERMINAL,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["accepted", "rejected", "cancelled", "ghosted", "withdrawn"];
-const OUTCOME_CLASS: Record<AppStatus, string> = {
-  rejected: "out-rejected", ghosted: "out-ghosted", cancelled: "out-cancelled", withdrawn: "out-withdrawn",
-} as Record<AppStatus, string>;
 
 // Real pipeline stages beyond "applied" (excludes terminal outcomes).
 const PROGRESS_STAGES: AppStatus[] = [
@@ -126,40 +123,7 @@ export default function Analytics() {
         {apps.isLoading ? <PanelSkeleton rows={5} /> : !baseline ? (
           <p className="muted">{t("overview.emptyFunnel")}</p>
         ) : (
-          <>
-            <FunnelChart stages={stageFunnel} onClickStage={goToStage} />
-
-            <div className="funnel-details">
-              {stageFunnel.map(({ stage, pctOfBaseline, pctOfPrev, lost, lostByOutcome, accepted }) => (
-                <div key={stage} className="funnel-detail-row">
-                  <button className="tag-btn funnel-detail-stage" onClick={() => goToStage(stage)}>
-                    <Badge status={stage} />
-                    <span className="muted" style={{ fontSize: 12 }}>
-                      {pct(pctOfBaseline)} {t("overview.ofTotal")}
-                      {pctOfPrev !== null && ` · ${pct(pctOfPrev)} ${t("overview.vsPrevStage")}`}
-                    </span>
-                  </button>
-
-                  {accepted > 0 && (
-                    <button className="tag-btn funnel-drop-positive" onClick={() => goToOutcomeAtStage("accepted", "offer")}>
-                      <span className="legend-dot out-accepted" /> {accepted} {t("overview.acceptedHere")}
-                    </button>
-                  )}
-                  {lost > 0 && (
-                    <div className="funnel-drop">
-                      <span className="muted">−{lost} {t("overview.closedHere")}:</span>
-                      {lostByOutcome.map(({ outcome, count: c }) => (
-                        <button key={outcome} className="tag-btn legend-item" onClick={() => goToOutcomeAtStage(outcome, stage)}>
-                          <span className={`legend-dot ${OUTCOME_CLASS[outcome]}`} />
-                          {statusLabel(t, outcome)} ({c})
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
+          <FunnelChart stages={stageFunnel} onClickStage={goToStage} onClickOutcome={goToOutcomeAtStage} />
         )}
       </div>
 

@@ -1,53 +1,86 @@
 import { useEffect, useState } from "react";
 import type { AppStatus } from "../api";
-import { statusFillVar, statusLabel } from "./ui";
+import { pct, statusFillVar, statusLabel } from "./ui";
 import { useI18n } from "../i18n";
 
-// ---- classic trapezoid funnel: wide top, narrowing toward the bottom ----
+export type FunnelStageData = {
+  stage: AppStatus;
+  count: number;
+  pctOfBaseline: number;
+  pctOfPrev: number | null;
+  lost: number;
+  lostByOutcome: { outcome: AppStatus; count: number }[];
+  accepted: number;
+};
+
+// ---- horizontal funnel: stages flow left to right, full width; each column
+// shows its segment plus the drop-off details for that stage right below it ----
 export function FunnelChart({
-  stages, onClickStage,
+  stages, onClickStage, onClickOutcome,
 }: {
-  stages: { stage: AppStatus; count: number; pctOfBaseline: number }[];
+  stages: FunnelStageData[];
   onClickStage?: (stage: AppStatus) => void;
+  onClickOutcome?: (outcome: AppStatus, stage: AppStatus) => void;
 }) {
   const { t } = useI18n();
-  const W = 460;
-  const segH = 64;
-  const gap = 3;
-  const H = stages.length * (segH + gap);
-  const cx = W / 2;
-  const maxW = W * 0.92;
-  const minW = W * 0.22;
-
-  const widthAt = (frac: number) => Math.max(minW, frac * maxW);
+  // Segment heights as % of the band; keep a floor so tiny stages stay visible/clickable.
+  const minFrac = 0.1;
+  const hAt = (frac: number) => Math.max(minFrac, frac) * 100;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="funnel-svg-wrap" role="img">
+    <div className="funnel-h" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(110px, 1fr))` }}>
       {stages.map((s, i) => {
-        const topW = widthAt(s.pctOfBaseline);
-        const nextFrac = i < stages.length - 1 ? stages[i + 1].pctOfBaseline : s.pctOfBaseline * 0.85;
-        const botW = widthAt(nextFrac);
-        const y = i * (segH + gap);
+        const leftH = hAt(s.pctOfBaseline);
+        const rightFrac = i < stages.length - 1 ? stages[i + 1].pctOfBaseline : s.pctOfBaseline * 0.85;
+        const rightH = hAt(rightFrac);
         const points = [
-          [cx - topW / 2, y],
-          [cx + topW / 2, y],
-          [cx + botW / 2, y + segH],
-          [cx - botW / 2, y + segH],
+          [0, 50 - leftH / 2],
+          [100, 50 - rightH / 2],
+          [100, 50 + rightH / 2],
+          [0, 50 + leftH / 2],
         ].map((p) => p.join(",")).join(" ");
         return (
-          <g
-            key={s.stage}
-            className="funnel-segment"
-            style={{ animationDelay: `${i * 70}ms` }}
-            onClick={() => onClickStage?.(s.stage)}
-          >
-            <polygon points={points} fill={statusFillVar(s.stage)} />
-            <text x={cx} y={y + segH / 2 - 4} className="funnel-seg-label">{statusLabel(t, s.stage)}</text>
-            <text x={cx} y={y + segH / 2 + 14} className="funnel-seg-count">{s.count}</text>
-          </g>
+          <div key={s.stage} className="funnel-col">
+            <button className="tag-btn funnel-col-head" onClick={() => onClickStage?.(s.stage)}>
+              <span className="funnel-col-name">{statusLabel(t, s.stage)}</span>
+              <span className="funnel-col-count">{s.count}</span>
+            </button>
+            <svg
+              className="funnel-col-band"
+              style={{ animationDelay: `${i * 70}ms` }}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              role="img"
+              onClick={() => onClickStage?.(s.stage)}
+            >
+              <polygon points={points} fill={statusFillVar(s.stage)} />
+            </svg>
+            <div className="funnel-col-details">
+              <span className="muted">
+                {pct(s.pctOfBaseline)} {t("overview.ofTotal")}
+                {s.pctOfPrev !== null && <> · {pct(s.pctOfPrev)} {t("overview.vsPrevStage")}</>}
+              </span>
+              {s.accepted > 0 && (
+                <button className="tag-btn funnel-drop-positive" onClick={() => onClickOutcome?.("accepted", s.stage)}>
+                  <span className="legend-dot out-accepted" /> {s.accepted} {t("overview.acceptedHere")}
+                </button>
+              )}
+              {s.lost > 0 && (
+                <>
+                  <span className="muted">−{s.lost} {t("overview.closedHere")}:</span>
+                  {s.lostByOutcome.map(({ outcome, count: c }) => (
+                    <button key={outcome} className="tag-btn legend-item" onClick={() => onClickOutcome?.(outcome, s.stage)}>
+                      <span className="legend-dot" style={{ background: statusFillVar(outcome) }} />
+                      {statusLabel(t, outcome)} ({c})
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
         );
       })}
-    </svg>
+    </div>
   );
 }
 

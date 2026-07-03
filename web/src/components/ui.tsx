@@ -42,9 +42,15 @@ const COLOR_VAR: Record<string, string> = {
   "c-muted": "var(--muted)", "c-accent": "var(--accent)",
   "c-yellow": "var(--yellow)", "c-green": "var(--green)", "c-red": "var(--red)",
 };
+// Terminal outcomes get distinct colours (matching the .legend-dot.out-* classes)
+// so they can be told apart in the outcome pie chart and legends.
+const TERMINAL_FILL: Partial<Record<AppStatus, string>> = {
+  accepted: "var(--green)", rejected: "var(--red)",
+  cancelled: "var(--yellow)", ghosted: "var(--muted)", withdrawn: "var(--accent)",
+};
 // Same colour grouping as statusColorClass, as a CSS color for SVG fills etc.
 export function statusFillVar(s: AppStatus): string {
-  return COLOR_VAR[statusColorClass(s)];
+  return TERMINAL_FILL[s] ?? COLOR_VAR[statusColorClass(s)];
 }
 
 export const PRIORITIES: Priority[] = ["high", "medium", "low"];
