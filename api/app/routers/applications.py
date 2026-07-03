@@ -121,7 +121,7 @@ def create_application(
             Application.user_id == current.id,
         )
     ).first()
-    if existing:
+    if existing and not data.force:
         raise HTTPException(
             status_code=409,
             detail=f"Already applied to this posting (status: {existing.status.value})",

@@ -217,10 +217,33 @@ export const api = {
   },
 };
 
+export interface PendingPosting {
+  url: string | null;
+  title: string;
+  company_name: string;
+  location: string | null;
+  country: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  currency: string | null;
+  source: string | null;
+}
+
+export interface PendingRow {
+  reason: string;
+  posting: PendingPosting;
+  status: AppStatus;
+  priority: Priority | null;
+  applied_at: string | null;
+  follow_up_date: string | null;
+  notes: string | null;
+}
+
 export interface ImportResult {
   imported: number;
   skipped: number;
   errors: string[];
+  pending: PendingRow[];
 }
 
 export interface ScrapeResult {

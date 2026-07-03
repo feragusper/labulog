@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApiError, type ImportResult } from "../api";
+import { addPendingImports } from "../pendingImports";
 import { useI18n, type Lang } from "../i18n";
 import { getThemePref, setThemePref, type ThemePref } from "../theme";
 
@@ -21,7 +23,9 @@ export default function Settings() {
     setImportResult(null);
     setImportError(null);
     try {
-      setImportResult(await api.importApplications(file));
+      const result = await api.importApplications(file);
+      setImportResult(result);
+      if (result.pending.length) addPendingImports(result.pending);
     } catch (err) {
       setImportError(err instanceof ApiError ? err.message : t("settings.importFailed"));
     } finally {
@@ -93,6 +97,14 @@ export default function Settings() {
               {t("settings.importDone")
                 .replace("{imported}", String(importResult.imported))
                 .replace("{skipped}", String(importResult.skipped))}
+            </p>
+            {importResult.pending.length > 0 && (
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                {t("settings.importPending").replace("{count}", String(importResult.pending.length))}
+              </p>
+            )}
+            <p style={{ margin: "8px 0 0" }}>
+              <Link to="/applications">{t("settings.importGoToApps")} →</Link>
             </p>
             {importResult.errors.length > 0 && (
               <div className="muted" style={{ marginTop: 6 }}>

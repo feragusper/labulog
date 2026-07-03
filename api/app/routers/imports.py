@@ -31,10 +31,35 @@ STAGE_COLUMNS = [
 SKIP_TOKENS = {"", "-", "waiting", "?", "`", "n/a"}
 
 
+class PendingPosting(BaseModel):
+    url: Optional[str] = None
+    title: str
+    company_name: str
+    location: Optional[str] = None
+    country: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: Optional[str] = None
+    source: Optional[str] = None
+
+
+class PendingRow(BaseModel):
+    """A row the importer skipped, handed back so the user can review it and
+    decide to force-add it or discard it from the app."""
+    reason: str
+    posting: PendingPosting
+    status: AppStatus = AppStatus.applied
+    priority: Optional[Priority] = None
+    applied_at: Optional[datetime] = None
+    follow_up_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
 class ImportResult(BaseModel):
     imported: int
     skipped: int
     errors: List[str]
+    pending: List[PendingRow] = []
 
 
 def _parse_date(value: Optional[str]) -> Optional[datetime]:
@@ -389,12 +414,13 @@ async def import_applications(
     imported = 0
     skipped = 0
     errors: List[str] = []
+    pending: List[PendingRow] = []
 
     for idx, row in enumerate(table, start=2):  # row 1 is the header
         company = _cell(row, header_map, "company")
         title = _cell(row, header_map, "title")
         if not company and not title:
-            skipped += 1
+            skipped += 1  # blank row, nothing to review
             continue
         company = company or "(sin empresa)"
         title = title or "(sin título)"
@@ -412,13 +438,21 @@ async def import_applications(
             if single and not salary_min and not salary_max:
                 salary_min = salary_max = single
 
+            status = _parse_status(_cell(row, header_map, "status"))
+            applied_at = _parse_date(_cell(row, header_map, "applied_at"))
+            follow_up = _parse_date(_cell(row, header_map, "follow_up_date"))
+            priority = _parse_priority(_cell(row, header_map, "priority"))
+            notes = _cell(row, header_map, "notes")
+            location = _cell(row, header_map, "location")
+            country = _cell(row, header_map, "country")
+            currency = _cell(row, header_map, "currency")
+            source = _cell(row, header_map, "source") or "import"
+
             posting = upsert_posting(session, PostingCreate(
                 url=url, title=title, company_name=company,
-                location=_cell(row, header_map, "location"),
-                country=_cell(row, header_map, "country"),
+                location=location, country=country,
                 salary_min=salary_min, salary_max=salary_max,
-                currency=_cell(row, header_map, "currency"),
-                source=_cell(row, header_map, "source") or "import",
+                currency=currency, source=source,
             ))
 
             exists = session.exec(
@@ -428,18 +462,26 @@ async def import_applications(
                 )
             ).first()
             if exists:
+                # Don't touch the existing application (may hold manual edits).
+                # Hand the row back so the user can review the conflict.
                 skipped += 1
+                pending.append(PendingRow(
+                    reason="already_exists",
+                    posting=PendingPosting(
+                        url=url, title=title, company_name=company,
+                        location=location, country=country,
+                        salary_min=salary_min, salary_max=salary_max,
+                        currency=currency, source=source,
+                    ),
+                    status=status, priority=priority,
+                    applied_at=applied_at, follow_up_date=follow_up, notes=notes,
+                ))
                 continue
-
-            status = _parse_status(_cell(row, header_map, "status"))
-            applied_at = _parse_date(_cell(row, header_map, "applied_at"))
 
             app = Application(
                 user_id=current.id, posting_id=posting.id, status=status,
-                priority=_parse_priority(_cell(row, header_map, "priority")),
-                follow_up_date=_parse_date(_cell(row, header_map, "follow_up_date")),
-                applied_at=applied_at or utcnow(),
-                notes=_cell(row, header_map, "notes"),
+                priority=priority, follow_up_date=follow_up,
+                applied_at=applied_at or utcnow(), notes=notes,
             )
             session.add(app)
             session.commit()
@@ -453,4 +495,4 @@ async def import_applications(
             session.rollback()
             errors.append(f"fila {idx} ({company}): {e}")
 
-    return ImportResult(imported=imported, skipped=skipped, errors=errors)
+    return ImportResult(imported=imported, skipped=skipped, errors=errors, pending=pending)

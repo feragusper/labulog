@@ -96,6 +96,9 @@ class ApplicationCreate(BaseModel):
     notes: Optional[str] = None
     applied_at: Optional[datetime] = None
     contacts: List["ContactCreate"] = []
+    # When True, create even if an application for this posting already exists
+    # (used to force-add a row that the importer had skipped as a duplicate).
+    force: bool = False
 
 
 class ApplicationUpdate(BaseModel):

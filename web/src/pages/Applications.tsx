@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, ApiError, type AppStatus, type Application, type Priority } from "../api";
+import { api, ApiError, type AppStatus, type Application, type PendingRow, type Priority } from "../api";
 import {
   Badge, furthestStage, PriorityBadge, PRIORITIES, rankOf, STATUSES,
   statusColorClass, statusLabel, TableSkeleton,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
 import { flag, toCountryCode } from "../countries";
+import {
+  clearPendingImports, getPendingImports, onPendingImportsChange, removePendingImport,
+} from "../pendingImports";
 import { useI18n } from "../i18n";
 
 const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
@@ -125,6 +128,8 @@ export default function Applications() {
         </div>
       </div>
 
+      <PendingImports onResolved={invalidate} />
+
       <AddApplication onAdded={invalidate} />
 
       {(stageParam || minStageParam) && (
@@ -184,6 +189,68 @@ export default function Applications() {
         )}
       </div>
     </div>
+  );
+}
+
+function PendingImports({ onResolved }: { onResolved: () => void }) {
+  const { t } = useI18n();
+  const [rows, setRows] = useState<PendingRow[]>(getPendingImports);
+  useEffect(() => onPendingImportsChange(() => setRows(getPendingImports())), []);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="panel pending-imports">
+      <div className="row" style={{ alignItems: "center", marginBottom: 4 }}>
+        <h2 style={{ flex: 1, margin: 0 }}>{t("pending.title")} ({rows.length})</h2>
+        <button className="shrink ghost" onClick={() => clearPendingImports()}>{t("pending.discardAll")}</button>
+      </div>
+      <p className="muted" style={{ marginTop: 0 }}>{t("pending.desc")}</p>
+      <table>
+        <tbody>
+          {rows.map((r, i) => <PendingRowView key={i} row={r} onResolved={onResolved} />)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PendingRowView({ row, onResolved }: { row: PendingRow; onResolved: () => void }) {
+  const { t } = useI18n();
+  const p = row.posting;
+  const add = useMutation({
+    mutationFn: () => api.createApplication({
+      posting: p,
+      status: row.status,
+      priority: row.priority,
+      applied_at: row.applied_at,
+      follow_up_date: row.follow_up_date,
+      notes: row.notes,
+      force: true,
+    }),
+    onSuccess: () => { removePendingImport(row); onResolved(); },
+  });
+  return (
+    <tr>
+      <td>
+        <div>
+          {p.country && <span style={{ marginRight: 6 }}>{flag(p.country)}</span>}
+          {p.company_name}
+        </div>
+        <div className="muted" style={{ fontSize: 12 }}>{p.title}</div>
+      </td>
+      <td><Badge status={row.status} /></td>
+      <td className="muted">{fmt(row.applied_at)}</td>
+      <td className="muted" style={{ fontSize: 12 }}>{t(`pending.reason.${row.reason}`)}</td>
+      <td>
+        <div className="row" style={{ justifyContent: "flex-end" }}>
+          <button className="shrink" disabled={add.isPending} onClick={() => add.mutate()}>
+            {add.isPending ? t("pending.adding") : t("pending.add")}
+          </button>
+          <button className="shrink ghost" onClick={() => removePendingImport(row)}>{t("pending.discard")}</button>
+        </div>
+      </td>
+    </tr>
   );
 }
 

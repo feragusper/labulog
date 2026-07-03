@@ -143,6 +143,7 @@ a { color: var(--accent); }
   border-radius: var(--radius); padding: 18px; margin-top: 16px;
 }
 .panel h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.pending-imports { border-left: 3px solid var(--accent); }
 
 input, select, textarea {
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
