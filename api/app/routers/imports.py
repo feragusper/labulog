@@ -1,6 +1,7 @@
 import csv
 import io
 import re
+import unicodedata
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -221,7 +222,11 @@ FIELD_ALIASES: Dict[str, List[str]] = {
     "status": ["status", "estado"],
     "priority": ["priority", "prioridad"],
     "applied_at": ["appliedat", "applied", "applieddate", "apply", "fecha",
-                   "fechapostulacion", "date", "appliedon"],
+                   "fechapostulacion", "date", "appliedon",
+                   "aplicada", "aplicado", "aplicacion", "aplico",
+                   "fechaaplicacion", "fechaaplicada", "fechadeaplicacion",
+                   "postulada", "postulado", "fechapostulada",
+                   "fechadepostulacion"],
     "follow_up_date": ["followupdate", "followup", "seguimiento",
                        "fechaseguimiento", "proximopaso"],
     "salary_min": ["salarymin", "salariomin", "minsalary", "sueldomin"],
@@ -277,7 +282,13 @@ PRIORITY_SYNONYMS: List[Tuple[str, Priority]] = [
 
 
 def _norm_key(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+    # Lowercase, strip accents (á->a, ó->o, ñ->n) and drop non-alphanumerics,
+    # so "Fecha de aplicación", "aplicada" and "applied_at" all collapse to a
+    # comparable key.
+    lowered = (text or "").lower()
+    decomposed = unicodedata.normalize("NFKD", lowered)
+    no_accents = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "", no_accents)
 
 
 def _build_header_map(fieldnames: List[str]) -> Dict[str, str]:
