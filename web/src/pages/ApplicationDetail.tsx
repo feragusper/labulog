@@ -99,6 +99,7 @@ export default function ApplicationDetail() {
               <Meta label={t("detail.applied")}>{app.applied_at ? fmtDate(app.applied_at) : "—"}</Meta>
               <Meta label={t("detail.followup")}>{app.follow_up_date ? fmtDate(app.follow_up_date) : "—"}</Meta>
               <Meta label={t("form.country")}>{countryDisplay(p.country)}</Meta>
+              <Meta label={t("form.industry")}>{p.industry ?? "—"}</Meta>
               <Meta label={t("detail.source")}>{p.source ?? "—"}</Meta>
               <Meta label={t("detail.salary")}>
                 {p.salary_min ? `${p.currency ?? ""} ${p.salary_min.toLocaleString()}` : "—"}
@@ -187,7 +188,8 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
   const p = app.posting;
   const [f, setF] = useState({
     title: p.title, company_name: p.company_name ?? "",
-    country: p.country ?? "", source: p.source ?? "", salary_min: p.salary_min?.toString() ?? "",
+    country: p.country ?? "", industry: p.industry ?? "",
+    source: p.source ?? "", salary_min: p.salary_min?.toString() ?? "",
     salary_max: p.salary_max?.toString() ?? "", currency: p.currency ?? "",
     status: app.status, applied_at: toDateInput(app.applied_at), notes: app.notes ?? "",
     priority: (app.priority ?? "") as "" | Priority, follow_up_date: toDateInput(app.follow_up_date),
@@ -198,7 +200,8 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
     mutationFn: async () => {
       await api.updatePosting(p.id, {
         title: f.title, company_name: f.company_name || null,
-        country: f.country || null, source: f.source || null, currency: f.currency || null,
+        country: f.country || null, industry: f.industry || null,
+        source: f.source || null, currency: f.currency || null,
         salary_min: f.salary_min ? Number(f.salary_min) : null,
         salary_max: f.salary_max ? Number(f.salary_max) : null,
       });
@@ -221,6 +224,7 @@ function EditForm({ app, onDone, onCancel }: { app: Application; onDone: () => v
         <div><label>{t("detail.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("detail.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
+        <div><label>{t("form.industry")}</label><input value={f.industry} onChange={set("industry")} /></div>
         <div><label>{t("detail.source")}</label><input value={f.source} onChange={set("source")} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>

@@ -33,6 +33,7 @@ _ENSURE_COLUMNS = {
     ],
     "jobposting": [
         ("country", "VARCHAR"),
+        ("industry", "VARCHAR"),
     ],
 }
 

@@ -32,6 +32,7 @@ class PostingCreate(BaseModel):
     country: Optional[str] = None
     remote: Optional[str] = None
     seniority: Optional[str] = None
+    industry: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None
@@ -50,6 +51,7 @@ class PostingRead(BaseModel):
     country: Optional[str] = None
     remote: Optional[str]
     seniority: Optional[str]
+    industry: Optional[str] = None
     salary_min: Optional[int]
     salary_max: Optional[int]
     currency: Optional[str]
@@ -119,6 +121,7 @@ class PostingUpdate(BaseModel):
     country: Optional[str] = None
     remote: Optional[str] = None
     seniority: Optional[str] = None
+    industry: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None

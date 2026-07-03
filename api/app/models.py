@@ -57,6 +57,7 @@ class JobPosting(SQLModel, table=True):
     country: Optional[str] = None
     remote: Optional[str] = None  # onsite | hybrid | remote
     seniority: Optional[str] = None
+    industry: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None

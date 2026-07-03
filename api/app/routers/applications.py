@@ -84,14 +84,14 @@ def export_csv(
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["company", "title", "status", "priority", "applied_at",
+    w.writerow(["company", "title", "industry", "status", "priority", "applied_at",
                 "follow_up_date", "salary_min", "salary_max", "currency",
                 "source", "url", "notes"])
     for a in apps:
         p = session.get(JobPosting, a.posting_id)
         company = session.get(Company, p.company_id).name if p and p.company_id else ""
         w.writerow([
-            company, p.title if p else "", a.status.value,
+            company, p.title if p else "", p.industry if p else "", a.status.value,
             a.priority.value if a.priority else "",
             a.applied_at.date().isoformat() if a.applied_at else "",
             a.follow_up_date.date().isoformat() if a.follow_up_date else "",

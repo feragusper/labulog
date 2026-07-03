@@ -190,10 +190,6 @@ export default function Applications() {
             <span className="bulk-count">
               {t("bulk.selectedCount").replace("{count}", String(selected.size))}
             </span>
-            <button className="link-btn" onClick={() => setSelected(new Set(rows.map((a) => a.id)))}>
-              {t("bulk.selectAll").replace("{count}", String(rows.length))}
-            </button>
-            <button className="link-btn" onClick={clearSelection}>{t("bulk.clear")}</button>
             <span style={{ flex: 1 }} />
             <button className="shrink" onClick={() => setBulkOpen(true)}>{t("bulk.edit")}</button>
             <button
@@ -539,7 +535,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
-    url: "", title: "", company_name: "", country: "", source: "linkedin",
+    url: "", title: "", company_name: "", country: "", industry: "", source: "linkedin",
     salary_min: "", salary_max: "", currency: "USD", notes: "",
     status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
     applied_at: new Date().toISOString().slice(0, 10),
@@ -574,7 +570,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       api.createApplication({
         posting: {
           url: f.url || null, title: f.title, company_name: f.company_name,
-          country: f.country || null, source: f.source || null,
+          country: f.country || null, industry: f.industry || null, source: f.source || null,
           salary_min: f.salary_min ? Number(f.salary_min) : null,
           salary_max: f.salary_max ? Number(f.salary_max) : null,
           currency: f.currency || null,
@@ -589,7 +585,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       }),
     onSuccess: () => {
       setOpen(false); setError("");
-      setF({ ...f, url: "", title: "", company_name: "", notes: "", follow_up_date: "" });
+      setF({ ...f, url: "", title: "", company_name: "", industry: "", notes: "", follow_up_date: "" });
       setContacts([]);
       lookup.reset();
       onAdded();
@@ -629,6 +625,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
         <div><label>{t("form.company")}</label><input value={f.company_name} onChange={set("company_name")} /></div>
         <div><label>{t("form.role")}</label><input value={f.title} onChange={set("title")} /></div>
         <div><label>{t("form.country")}</label><CountrySelect value={f.country} onChange={(c) => setF((p) => ({ ...p, country: c }))} /></div>
+        <div><label>{t("form.industry")}</label><input value={f.industry} onChange={set("industry")} /></div>
         <div><label>{t("form.salaryMin")}</label><input value={f.salary_min} onChange={set("salary_min")} inputMode="numeric" /></div>
         <div><label>{t("form.salaryMax")}</label><input value={f.salary_max} onChange={set("salary_max")} inputMode="numeric" /></div>
         <div><label>{t("form.source")}</label><input value={f.source} onChange={set("source")} /></div>

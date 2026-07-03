@@ -37,6 +37,7 @@ class PendingPosting(BaseModel):
     company_name: str
     location: Optional[str] = None
     country: Optional[str] = None
+    industry: Optional[str] = None
     salary_min: Optional[int] = None
     salary_max: Optional[int] = None
     currency: Optional[str] = None
@@ -231,6 +232,7 @@ FIELD_ALIASES: Dict[str, List[str]] = {
     "url": ["url", "link", "enlace"],
     "location": ["location", "ubicacion", "ciudad", "city"],
     "country": ["country", "pais"],
+    "industry": ["industry", "industria", "sector", "rubro"],
     "notes": ["notes", "notas", "note", "nota", "comentarios", "comments",
               "result", "resultado"],
 }
@@ -445,12 +447,13 @@ async def import_applications(
             notes = _cell(row, header_map, "notes")
             location = _cell(row, header_map, "location")
             country = _cell(row, header_map, "country")
+            industry = _cell(row, header_map, "industry")
             currency = _cell(row, header_map, "currency")
             source = _cell(row, header_map, "source") or "import"
 
             posting = upsert_posting(session, PostingCreate(
                 url=url, title=title, company_name=company,
-                location=location, country=country,
+                location=location, country=country, industry=industry,
                 salary_min=salary_min, salary_max=salary_max,
                 currency=currency, source=source,
             ))
@@ -469,7 +472,7 @@ async def import_applications(
                     reason="already_exists",
                     posting=PendingPosting(
                         url=url, title=title, company_name=company,
-                        location=location, country=country,
+                        location=location, country=country, industry=industry,
                         salary_min=salary_min, salary_max=salary_max,
                         currency=currency, source=source,
                     ),
