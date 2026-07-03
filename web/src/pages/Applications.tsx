@@ -19,6 +19,16 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 type SortKey = "company" | "status" | "priority" | "salary" | "applied" | "activity" | "followup";
 type SortDir = "asc" | "desc";
 
+// Options for the sort dropdown: value is "<key>-<dir>", key is an i18n string.
+const SORT_OPTIONS: { v: string; key: string }[] = [
+  { v: "applied-asc", key: "apps.sortAppliedAsc" },
+  { v: "applied-desc", key: "apps.sortAppliedDesc" },
+  { v: "company-asc", key: "apps.sortAz" },
+  { v: "company-desc", key: "apps.sortZa" },
+  { v: "activity-asc", key: "apps.sortActivityAsc" },
+  { v: "activity-desc", key: "apps.sortActivityDesc" },
+];
+
 function lastActivity(a: Application): number {
   const dates = a.events.map((e) => +new Date(e.at));
   return dates.length ? Math.max(...dates) : +new Date(a.updated_at);
@@ -178,6 +188,20 @@ export default function Applications() {
             <option value="all">{t("apps.allPriorities")}</option>
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
+          {view === "list" && (
+            <select
+              value={`${sortKey}-${sortDir}`}
+              onChange={(e) => {
+                const [k, d] = e.target.value.split("-");
+                setSortKey(k as SortKey);
+                setSortDir(d as SortDir);
+              }}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.v} value={o.v}>{t(o.key)}</option>
+              ))}
+            </select>
+          )}
           <label className="check">
             <input type="checkbox" checked={hideClosed} onChange={(e) => setHideClosed(e.target.checked)} />
             {t("apps.hideClosed")}
