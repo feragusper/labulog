@@ -67,11 +67,13 @@ class ImportResult(BaseModel):
 # Excel stores dates as a serial day count from this epoch (the 1900 system).
 _EXCEL_EPOCH = datetime(1899, 12, 30)
 
+# Day-first (dd/mm/yyyy) is prioritised over US mm/dd, so ambiguous dates like
+# 03/04/2024 read as 3 April, not 4 March.
 _DATE_FORMATS = (
     "%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y/%m/%d",
-    "%m/%d/%Y", "%d/%m/%Y", "%d/%m/%y", "%m/%d/%y",
-    "%d-%m-%Y", "%d.%m.%Y", "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y",
-    "%d-%b-%Y", "%d-%b-%y",
+    "%d/%m/%Y", "%d/%m/%y", "%d-%m-%Y", "%d.%m.%Y",
+    "%m/%d/%Y", "%m/%d/%y",
+    "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y", "%d-%b-%Y", "%d-%b-%y",
 )
 
 
