@@ -148,7 +148,6 @@ a { color: var(--accent); }
 /* ---- bulk select + edit ---- */
 .check-cell { width: 32px; text-align: center; }
 .check-cell input { width: auto; margin: 0; }
-tr.statusrow.selected td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .bulk-bar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   margin: 12px 0; padding: 10px 12px;
@@ -268,6 +267,12 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: upp
   flex: 0 0 200px; background: var(--bg); border: 1px solid var(--border);
   border-radius: 10px; padding: 10px; min-height: 120px; transition: border-color .12s, background .12s;
 }
+/* very subtle column tint: 5% of the status colour over the base bg */
+.board-col.c-muted  { background: color-mix(in srgb, var(--muted) 5%, var(--bg)); }
+.board-col.c-accent { background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+.board-col.c-yellow { background: color-mix(in srgb, var(--yellow) 5%, var(--bg)); }
+.board-col.c-green  { background: color-mix(in srgb, var(--green) 5%, var(--bg)); }
+.board-col.c-red    { background: color-mix(in srgb, var(--red) 5%, var(--bg)); }
 .board-col.over { border-color: var(--accent); background: var(--panel-2); }
 .board-col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .board-card {
@@ -301,6 +306,15 @@ th.sortable:hover { color: var(--text); }
 .statusrow.c-green  td:first-child { box-shadow: inset 4px 0 0 var(--green); }
 .statusrow.c-red    td:first-child { box-shadow: inset 4px 0 0 var(--red); }
 .statusrow td:first-child { padding-left: 14px; }
+
+/* very subtle row tint: 5% of the side-bar colour */
+.statusrow.c-muted  td { background: color-mix(in srgb, var(--muted) 5%, transparent); }
+.statusrow.c-accent td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.statusrow.c-yellow td { background: color-mix(in srgb, var(--yellow) 5%, transparent); }
+.statusrow.c-green  td { background: color-mix(in srgb, var(--green) 5%, transparent); }
+.statusrow.c-red    td { background: color-mix(in srgb, var(--red) 5%, transparent); }
+/* selected wins over the status tint */
+tr.statusrow.selected td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
 /* ---- application detail ---- */
 .detail-meta {

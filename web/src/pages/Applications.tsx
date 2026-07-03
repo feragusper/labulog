@@ -499,7 +499,7 @@ function Board({ apps, hideClosed, onDrop }: {
         return (
           <div
             key={col}
-            className={`board-col${over === col ? " over" : ""}`}
+            className={`board-col ${statusColorClass(col)}${over === col ? " over" : ""}`}
             onDragOver={(e) => { e.preventDefault(); setOver(col); }}
             onDragLeave={() => setOver((o) => (o === col ? null : o))}
             onDrop={() => { if (dragId != null) onDrop(dragId, col); setDragId(null); setOver(null); }}
