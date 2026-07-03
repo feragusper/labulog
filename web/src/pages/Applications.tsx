@@ -90,16 +90,6 @@ export default function Applications() {
     onSuccess: () => { invalidate(); clearSelection(); },
   });
 
-  // Drop selected ids that no longer exist (e.g. after a delete elsewhere).
-  useEffect(() => {
-    if (!apps.data) return;
-    const live = new Set(apps.data.map((a) => a.id));
-    setSelected((s) => {
-      const next = new Set([...s].filter((id) => live.has(id)));
-      return next.size === s.size ? s : next;
-    });
-  }, [apps.data]);
-
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir(key === "company" ? "asc" : "desc"); }
@@ -139,6 +129,16 @@ export default function Applications() {
       return 0;
     });
   }, [filtered, statusFilter, sortKey, sortDir]);
+
+  // Keep the selection limited to what's currently visible: filtering (or a
+  // delete elsewhere) drops any selected row that's no longer in the list.
+  useEffect(() => {
+    const visible = new Set(rows.map((a) => a.id));
+    setSelected((s) => {
+      const next = new Set([...s].filter((id) => visible.has(id)));
+      return next.size === s.size ? s : next;
+    });
+  }, [rows]);
 
   const arrow = (key: SortKey) => sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
