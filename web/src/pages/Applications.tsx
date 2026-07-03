@@ -52,6 +52,15 @@ export default function Applications() {
   const [hideClosed, setHideClosed] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("applied");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const toggleSelect = (id: number) => setSelected((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const clearSelection = () => setSelected(new Set());
 
   // Sync the status dropdown when navigated here again with a different ?status= (no remount).
   useEffect(() => {
@@ -75,6 +84,21 @@ export default function Applications() {
       api.updateApplication(id, { status }),
     onSuccess: invalidate,
   });
+
+  const bulkDelete = useMutation({
+    mutationFn: (ids: number[]) => Promise.all(ids.map((id) => api.deleteApplication(id))),
+    onSuccess: () => { invalidate(); clearSelection(); },
+  });
+
+  // Drop selected ids that no longer exist (e.g. after a delete elsewhere).
+  useEffect(() => {
+    if (!apps.data) return;
+    const live = new Set(apps.data.map((a) => a.id));
+    setSelected((s) => {
+      const next = new Set([...s].filter((id) => live.has(id)));
+      return next.size === s.size ? s : next;
+    });
+  }, [apps.data]);
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -161,6 +185,31 @@ export default function Applications() {
           <span className="muted" style={{ fontSize: 13 }}>{filtered.length} {t("common.results")}</span>
         </div>
 
+        {selected.size > 0 && (
+          <div className="bulk-bar">
+            <span className="bulk-count">
+              {t("bulk.selectedCount").replace("{count}", String(selected.size))}
+            </span>
+            <button className="link-btn" onClick={() => setSelected(new Set(rows.map((a) => a.id)))}>
+              {t("bulk.selectAll").replace("{count}", String(rows.length))}
+            </button>
+            <button className="link-btn" onClick={clearSelection}>{t("bulk.clear")}</button>
+            <span style={{ flex: 1 }} />
+            <button className="shrink" onClick={() => setBulkOpen(true)}>{t("bulk.edit")}</button>
+            <button
+              className="shrink danger"
+              disabled={bulkDelete.isPending}
+              onClick={() => {
+                if (window.confirm(t("bulk.deleteConfirm").replace("{count}", String(selected.size)))) {
+                  bulkDelete.mutate([...selected]);
+                }
+              }}
+            >
+              {bulkDelete.isPending ? t("bulk.deleting") : t("bulk.delete")}
+            </button>
+          </div>
+        )}
+
         {apps.isLoading && <TableSkeleton />}
         {apps.data && apps.data.length === 0 && <p className="muted">{t("apps.empty")}</p>}
 
@@ -168,6 +217,14 @@ export default function Applications() {
           <table>
             <thead>
               <tr>
+                <th className="check-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={t("bulk.selectAll")}
+                    checked={rows.length > 0 && rows.every((a) => selected.has(a.id))}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((a) => a.id)) : new Set())}
+                  />
+                </th>
                 <th className="sortable" onClick={() => toggleSort("company")}>{t("apps.colCompany")}{arrow("company")}</th>
                 <th className="sortable" onClick={() => toggleSort("status")}>{t("apps.colStatus")}{arrow("status")}</th>
                 <th className="sortable" onClick={() => toggleSort("priority")}>{t("apps.colPriority")}{arrow("priority")}</th>
@@ -178,7 +235,13 @@ export default function Applications() {
             </thead>
             <tbody>
               {rows.map((a) => (
-                <AppRow key={a.id} app={a} onStatus={(s) => setStatus.mutate({ id: a.id, status: s })} />
+                <AppRow
+                  key={a.id}
+                  app={a}
+                  selected={selected.has(a.id)}
+                  onToggleSelect={() => toggleSelect(a.id)}
+                  onStatus={(s) => setStatus.mutate({ id: a.id, status: s })}
+                />
               ))}
             </tbody>
           </table>
@@ -188,6 +251,14 @@ export default function Applications() {
           <Board apps={filtered} hideClosed={hideClosed} onDrop={(id, status) => setStatus.mutate({ id, status })} />
         )}
       </div>
+
+      {bulkOpen && (
+        <BulkEditModal
+          ids={[...selected]}
+          onClose={() => setBulkOpen(false)}
+          onDone={() => { setBulkOpen(false); invalidate(); clearSelection(); }}
+        />
+      )}
     </div>
   );
 }
@@ -254,11 +325,19 @@ function PendingRowView({ row, onResolved }: { row: PendingRow; onResolved: () =
   );
 }
 
-function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) => void }) {
+function AppRow({ app, selected, onToggleSelect, onStatus }: {
+  app: Application;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onStatus: (s: AppStatus) => void;
+}) {
   const { t } = useI18n();
   const p = app.posting;
   return (
-    <tr className={`statusrow ${statusColorClass(app.status)}`}>
+    <tr className={`statusrow ${statusColorClass(app.status)}${selected ? " selected" : ""}`}>
+      <td className="check-cell">
+        <input type="checkbox" aria-label={t("bulk.selectRow")} checked={selected} onChange={onToggleSelect} />
+      </td>
       <td>
         <div>
           {p.country && <span style={{ marginRight: 6 }}>{flag(p.country)}</span>}
@@ -276,6 +355,134 @@ function AppRow({ app, onStatus }: { app: Application; onStatus: (s: AppStatus) 
       <td className="muted">{fmt(app.applied_at)}</td>
       <td className={isDue(app) ? "due" : "muted"}>{app.follow_up_date ? fmt(app.follow_up_date) : "—"}</td>
     </tr>
+  );
+}
+
+type BulkField = "status" | "priority" | "follow_up_date" | "applied_at" | "notes";
+
+function BulkEditModal({ ids, onClose, onDone }: {
+  ids: number[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useI18n();
+  const [enabled, setEnabled] = useState<Record<BulkField, boolean>>({
+    status: false, priority: false, follow_up_date: false, applied_at: false, notes: false,
+  });
+  const [status, setStatus] = useState<AppStatus>("applied");
+  const [priority, setPriority] = useState<"" | Priority>("");
+  const [followUp, setFollowUp] = useState("");
+  const [appliedAt, setAppliedAt] = useState("");
+  const [notes, setNotes] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  const labels: Record<BulkField, string> = {
+    status: t("apps.colStatus"),
+    priority: t("apps.colPriority"),
+    follow_up_date: t("apps.colFollowup"),
+    applied_at: t("apps.colApplied"),
+    notes: t("form.notes"),
+  };
+  const activeFields = (Object.keys(enabled) as BulkField[]).filter((k) => enabled[k]);
+
+  const buildPayload = () => {
+    const p: Record<string, unknown> = {};
+    if (enabled.status) p.status = status;
+    if (enabled.priority) p.priority = priority || null;
+    if (enabled.follow_up_date) p.follow_up_date = followUp ? `${followUp}T00:00:00` : null;
+    if (enabled.applied_at) p.applied_at = appliedAt ? `${appliedAt}T00:00:00` : null;
+    if (enabled.notes) p.notes = notes.trim() || null;
+    return p;
+  };
+
+  const save = useMutation({
+    mutationFn: () => {
+      const payload = buildPayload();
+      return Promise.all(ids.map((id) => api.updateApplication(id, payload)));
+    },
+    onSuccess: onDone,
+  });
+
+  const toggle = (k: BulkField) => setEnabled((e) => ({ ...e, [k]: !e[k] }));
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal-title">{t("bulk.modalTitle").replace("{count}", String(ids.length))}</h2>
+
+        {!confirming ? (
+          <>
+            <p className="muted" style={{ marginTop: 0 }}>
+              {t("bulk.modalDesc").replace("{count}", String(ids.length))}
+            </p>
+
+            <div className="bulk-fields">
+              <label className="bulk-field-check">
+                <input type="checkbox" checked={enabled.status} onChange={() => toggle("status")} />
+                <span>{labels.status}</span>
+              </label>
+              <select value={status} disabled={!enabled.status} onChange={(e) => setStatus(e.target.value as AppStatus)}>
+                {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
+              </select>
+
+              <label className="bulk-field-check">
+                <input type="checkbox" checked={enabled.priority} onChange={() => toggle("priority")} />
+                <span>{labels.priority}</span>
+              </label>
+              <select value={priority} disabled={!enabled.priority} onChange={(e) => setPriority(e.target.value as "" | Priority)}>
+                <option value="">—</option>
+                {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+
+              <label className="bulk-field-check">
+                <input type="checkbox" checked={enabled.applied_at} onChange={() => toggle("applied_at")} />
+                <span>{labels.applied_at}</span>
+              </label>
+              <input type="date" value={appliedAt} disabled={!enabled.applied_at} onChange={(e) => setAppliedAt(e.target.value)} />
+
+              <label className="bulk-field-check">
+                <input type="checkbox" checked={enabled.follow_up_date} onChange={() => toggle("follow_up_date")} />
+                <span>{labels.follow_up_date}</span>
+              </label>
+              <input type="date" value={followUp} disabled={!enabled.follow_up_date} onChange={(e) => setFollowUp(e.target.value)} />
+
+              <label className="bulk-field-check">
+                <input type="checkbox" checked={enabled.notes} onChange={() => toggle("notes")} />
+                <span>{labels.notes}</span>
+              </label>
+              <input value={notes} disabled={!enabled.notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("bulk.notesPlaceholder")} />
+            </div>
+
+            {activeFields.length === 0 && <p className="muted" style={{ fontSize: 13 }}>{t("bulk.noFields")}</p>}
+
+            <div className="row" style={{ marginTop: 16, justifyContent: "flex-end" }}>
+              <button className="shrink ghost" onClick={onClose}>{t("common.cancel")}</button>
+              <button className="shrink" disabled={activeFields.length === 0} onClick={() => setConfirming(true)}>
+                {t("bulk.save")}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ marginTop: 0 }}>
+              {t("bulk.confirmDesc")
+                .replace("{fields}", String(activeFields.length))
+                .replace("{count}", String(ids.length))}
+            </p>
+            <ul className="muted" style={{ margin: "0 0 8px", paddingLeft: 18, fontSize: 13 }}>
+              {activeFields.map((k) => <li key={k}>{labels[k]}</li>)}
+            </ul>
+            <p className="due" style={{ fontSize: 13 }}>{t("bulk.confirmWarn")}</p>
+            <div className="row" style={{ marginTop: 12, justifyContent: "flex-end" }}>
+              <button className="shrink ghost" disabled={save.isPending} onClick={() => setConfirming(false)}>{t("bulk.back")}</button>
+              <button className="shrink" disabled={save.isPending} onClick={() => save.mutate()}>
+                {save.isPending ? t("bulk.saving") : t("bulk.confirm")}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

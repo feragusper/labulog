@@ -145,6 +145,35 @@ a { color: var(--accent); }
 .panel h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .pending-imports { border-left: 3px solid var(--accent); }
 
+/* ---- bulk select + edit ---- */
+.check-cell { width: 32px; text-align: center; }
+.check-cell input { width: auto; margin: 0; }
+tr.statusrow.selected td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.bulk-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 12px 0; padding: 10px 12px;
+  background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px;
+}
+.bulk-bar .bulk-count { font-weight: 600; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .55);
+  display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 22px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+.modal-title { font-size: 18px; margin: 0 0 12px; }
+.bulk-fields {
+  display: grid; grid-template-columns: minmax(140px, 40%) 1fr;
+  gap: 10px 12px; align-items: center;
+}
+.bulk-field-check { display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; }
+.bulk-field-check input { width: auto; margin: 0; }
+.bulk-field-check span { color: var(--text); }
+
 input, select, textarea {
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
   border-radius: 8px; padding: 9px 11px; font-size: 14px; width: 100%;
