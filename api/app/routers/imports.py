@@ -2,7 +2,7 @@ import csv
 import io
 import re
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -64,19 +64,69 @@ class ImportResult(BaseModel):
     pending: List[PendingRow] = []
 
 
-def _parse_date(value: Optional[str]) -> Optional[datetime]:
-    if not value:
+# Excel stores dates as a serial day count from this epoch (the 1900 system).
+_EXCEL_EPOCH = datetime(1899, 12, 30)
+
+_DATE_FORMATS = (
+    "%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y/%m/%d",
+    "%m/%d/%Y", "%d/%m/%Y", "%d/%m/%y", "%m/%d/%y",
+    "%d-%m-%Y", "%d.%m.%Y", "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y",
+    "%d-%b-%Y", "%d-%b-%y",
+)
+
+
+def _parse_date(value) -> Optional[datetime]:
+    if value is None:
         return None
-    v = value.strip()
-    if v.lower() in SKIP_TOKENS:
+    # openpyxl hands back real date/datetime objects; use them as-is.
+    if isinstance(value, datetime):
+        return value
+    from datetime import date
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day)
+
+    v = str(value).strip()
+    if not v or v.lower() in SKIP_TOKENS:
         return None
-    for fmt in ("%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%d",
-                "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%d/%m/%y", "%m/%d/%y"):
+
+    # A bare number in a plausible range is an Excel serial date, not a year.
+    if re.fullmatch(r"\d{4,6}(\.0+)?", v):
+        n = int(float(v))
+        if 20000 <= n <= 80000:  # ~1954 .. ~2119
+            return _EXCEL_EPOCH + timedelta(days=n)
+
+    for fmt in _DATE_FORMATS:
         try:
             return datetime.strptime(v, fmt)
         except ValueError:
             continue
-    return None
+
+    # Last resort: dateutil copes with month names and odd separators. Translate
+    # Spanish month names first (dateutil only knows English).
+    try:
+        from dateutil import parser as _dtp
+        return _dtp.parse(_es_months_to_en(v), dayfirst=True, fuzzy=True)
+    except Exception:
+        return None
+
+
+_ES_MONTHS = {
+    "enero": "January", "febrero": "February", "marzo": "March", "abril": "April",
+    "mayo": "May", "junio": "June", "julio": "July", "agosto": "August",
+    "septiembre": "September", "setiembre": "September", "octubre": "October",
+    "noviembre": "November", "diciembre": "December",
+    "ene": "Jan", "feb": "Feb", "mar": "Mar", "abr": "Apr", "jun": "Jun",
+    "jul": "Jul", "ago": "Aug", "sep": "Sep", "set": "Sep", "oct": "Oct",
+    "nov": "Nov", "dic": "Dec",
+}
+
+
+def _es_months_to_en(text: str) -> str:
+    # Strip accents so "años"/"días" noise and accented months normalise, then
+    # swap Spanish month words for English ones.
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    flat = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return re.sub(r"[a-z]+", lambda m: _ES_MONTHS.get(m.group(0), m.group(0)), flat)
 
 
 def _parse_money(value: Optional[str]):
