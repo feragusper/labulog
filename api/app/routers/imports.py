@@ -2,16 +2,17 @@ import csv
 import io
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from ..crud import get_or_create_company
+from ..crud import get_or_create_company, upsert_posting
 from ..db import get_session
 from ..deps import get_current_user
-from ..models import AppStatus, Application, JobPosting, StatusEvent, User, utcnow
+from ..models import AppStatus, Application, JobPosting, Priority, StatusEvent, User, utcnow
+from ..schemas import PostingCreate
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
@@ -42,7 +43,8 @@ def _parse_date(value: Optional[str]) -> Optional[datetime]:
     v = value.strip()
     if v.lower() in SKIP_TOKENS:
         return None
-    for fmt in ("%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%d"):
+    for fmt in ("%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%d",
+                "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%d/%m/%y", "%m/%d/%y"):
         try:
             return datetime.strptime(v, fmt)
         except ValueError:
@@ -170,6 +172,281 @@ async def import_csv(
             if final_status != reached:
                 session.add(StatusEvent(application_id=app.id, status=final_status,
                                         at=events[-1][0], note="inferido del resultado"))
+            session.commit()
+            imported += 1
+        except Exception as e:  # keep going; report the bad row
+            session.rollback()
+            errors.append(f"fila {idx} ({company}): {e}")
+
+    return ImportResult(imported=imported, skipped=skipped, errors=errors)
+
+
+# ---------------------------------------------------------------------------
+# General importer: mirrors the export.csv format (and any spreadsheet close to
+# it). Maps whatever columns it recognises, leaves the rest blank, and lets the
+# user finish editing each row in the app afterwards.
+# ---------------------------------------------------------------------------
+
+# canonical field -> list of accepted header names (normalised: lowercased,
+# non-alphanumerics stripped, so "Applied At", "applied_at" and "fecha" all fit).
+FIELD_ALIASES: Dict[str, List[str]] = {
+    "company": ["company", "empresa", "companyname", "compania"],
+    "title": ["title", "role", "position", "puesto", "cargo", "titulo", "rol"],
+    "status": ["status", "estado"],
+    "priority": ["priority", "prioridad"],
+    "applied_at": ["appliedat", "applied", "applieddate", "apply", "fecha",
+                   "fechapostulacion", "date", "appliedon"],
+    "follow_up_date": ["followupdate", "followup", "seguimiento",
+                       "fechaseguimiento", "proximopaso"],
+    "salary_min": ["salarymin", "salariomin", "minsalary", "sueldomin"],
+    "salary_max": ["salarymax", "salariomax", "maxsalary", "sueldomax"],
+    "salary": ["salary", "salario", "sueldo", "money", "compensacion"],
+    "currency": ["currency", "moneda"],
+    "source": ["source", "fuente", "origen", "platform", "plataforma", "channel"],
+    "url": ["url", "link", "enlace"],
+    "location": ["location", "ubicacion", "ciudad", "city"],
+    "country": ["country", "pais"],
+    "notes": ["notes", "notas", "note", "nota", "comentarios", "comments",
+              "result", "resultado"],
+}
+
+# Loose value -> AppStatus. Checked as substrings against the normalised cell.
+STATUS_SYNONYMS: List[Tuple[str, AppStatus]] = [
+    ("firstcontact", AppStatus.first_contact),
+    ("primercontacto", AppStatus.first_contact),
+    ("screening", AppStatus.screening),
+    ("technical", AppStatus.technical_interview),
+    ("tecnica", AppStatus.technical_interview),
+    ("tecnico", AppStatus.technical_interview),
+    ("manager", AppStatus.manager_interview),
+    ("interview", AppStatus.interview),
+    ("entrevista", AppStatus.interview),
+    ("proposal", AppStatus.proposal),
+    ("propuesta", AppStatus.proposal),
+    ("offer", AppStatus.offer),
+    ("oferta", AppStatus.offer),
+    ("accepted", AppStatus.accepted),
+    ("aceptad", AppStatus.accepted),
+    ("rejected", AppStatus.rejected),
+    ("rechazad", AppStatus.rejected),
+    ("cancelled", AppStatus.cancelled),
+    ("cancelad", AppStatus.cancelled),
+    ("ghosted", AppStatus.ghosted),
+    ("ghost", AppStatus.ghosted),
+    ("withdrawn", AppStatus.withdrawn),
+    ("retirad", AppStatus.withdrawn),
+    ("saved", AppStatus.saved),
+    ("guardad", AppStatus.saved),
+    ("applied", AppStatus.applied),
+    ("postulad", AppStatus.applied),
+    ("aplicad", AppStatus.applied),
+]
+
+PRIORITY_SYNONYMS: List[Tuple[str, Priority]] = [
+    ("high", Priority.high), ("alta", Priority.high),
+    ("medium", Priority.medium), ("media", Priority.medium),
+    ("low", Priority.low), ("baja", Priority.low),
+]
+
+
+def _norm_key(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+
+def _build_header_map(fieldnames: List[str]) -> Dict[str, str]:
+    """Map canonical field -> the original header that supplies it."""
+    normalised = {_norm_key(h): h for h in fieldnames if h}
+    mapping: Dict[str, str] = {}
+    for field, aliases in FIELD_ALIASES.items():
+        for alias in aliases:
+            if alias in normalised:
+                mapping[field] = normalised[alias]
+                break
+    return mapping
+
+
+def _cell(row: dict, header_map: Dict[str, str], field: str) -> Optional[str]:
+    header = header_map.get(field)
+    if not header:
+        return None
+    value = row.get(header)
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() in SKIP_TOKENS:
+        return None
+    return text
+
+
+def _parse_status(value: Optional[str]) -> AppStatus:
+    if not value:
+        return AppStatus.applied
+    key = _norm_key(value)
+    try:
+        return AppStatus(value.strip().lower())
+    except ValueError:
+        pass
+    for token, status in STATUS_SYNONYMS:
+        if token in key:
+            return status
+    return AppStatus.applied
+
+
+def _parse_priority(value: Optional[str]) -> Optional[Priority]:
+    if not value:
+        return None
+    key = _norm_key(value)
+    for token, prio in PRIORITY_SYNONYMS:
+        if token in key:
+            return prio
+    return None
+
+
+def _parse_int(value: Optional[str]) -> Optional[int]:
+    if not value:
+        return None
+    digits = re.sub(r"[^\d]", "", value.split(".")[0].split(",")[0])
+    return int(digits) if digits else None
+
+
+def _read_table(filename: str, raw: bytes) -> Tuple[List[str], List[dict]]:
+    """Return (fieldnames, rows) from a CSV or Excel upload."""
+    name = (filename or "").lower()
+    if name.endswith((".xlsx", ".xlsm")):
+        return _read_xlsx(raw)
+    if name.endswith(".xls"):
+        return _read_xls(raw)
+    # default: CSV / text
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("latin-1")
+    reader = csv.DictReader(io.StringIO(text))
+    return list(reader.fieldnames or []), list(reader)
+
+
+def _read_xlsx(raw: bytes) -> Tuple[List[str], List[dict]]:
+    try:
+        from openpyxl import load_workbook
+    except ImportError:  # pragma: no cover
+        raise HTTPException(status_code=400,
+                            detail="Soporte de .xlsx no disponible en el servidor.")
+    wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+    ws = wb.active
+    rows_iter = ws.iter_rows(values_only=True)
+    try:
+        header_row = next(rows_iter)
+    except StopIteration:
+        return [], []
+    headers = [str(h).strip() if h is not None else "" for h in header_row]
+    rows = []
+    for values in rows_iter:
+        rows.append({headers[i]: values[i] for i in range(len(headers)) if i < len(values)})
+    return headers, rows
+
+
+def _read_xls(raw: bytes) -> Tuple[List[str], List[dict]]:
+    try:
+        import xlrd
+    except ImportError:  # pragma: no cover
+        raise HTTPException(
+            status_code=400,
+            detail="Soporte de .xls no disponible; guardá el archivo como .xlsx o .csv.",
+        )
+    book = xlrd.open_workbook(file_contents=raw)
+    sheet = book.sheet_by_index(0)
+    if sheet.nrows == 0:
+        return [], []
+    headers = [str(c.value).strip() for c in sheet.row(0)]
+    rows = []
+    for r in range(1, sheet.nrows):
+        cells = sheet.row(r)
+        rows.append({headers[i]: cells[i].value for i in range(len(headers)) if i < len(cells)})
+    return headers, rows
+
+
+@router.post("/applications", response_model=ImportResult)
+async def import_applications(
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    raw = await file.read()
+    try:
+        fieldnames, table = _read_table(file.filename or "", raw)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"No se pudo leer el archivo: {e}")
+
+    header_map = _build_header_map(fieldnames)
+    if "company" not in header_map and "title" not in header_map:
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo necesita al menos una columna de empresa o de puesto.",
+        )
+
+    imported = 0
+    skipped = 0
+    errors: List[str] = []
+
+    for idx, row in enumerate(table, start=2):  # row 1 is the header
+        company = _cell(row, header_map, "company")
+        title = _cell(row, header_map, "title")
+        if not company and not title:
+            skipped += 1
+            continue
+        company = company or "(sin empresa)"
+        title = title or "(sin título)"
+
+        try:
+            url = _cell(row, header_map, "url")
+            # Give url-less rows a stable synthetic key so re-imports upsert
+            # instead of duplicating.
+            if not url:
+                url = f"imported://app/{_slug(company)}-{_slug(title)}"
+
+            salary_min = _parse_int(_cell(row, header_map, "salary_min"))
+            salary_max = _parse_int(_cell(row, header_map, "salary_max"))
+            single = _parse_int(_cell(row, header_map, "salary"))
+            if single and not salary_min and not salary_max:
+                salary_min = salary_max = single
+
+            posting = upsert_posting(session, PostingCreate(
+                url=url, title=title, company_name=company,
+                location=_cell(row, header_map, "location"),
+                country=_cell(row, header_map, "country"),
+                salary_min=salary_min, salary_max=salary_max,
+                currency=_cell(row, header_map, "currency"),
+                source=_cell(row, header_map, "source") or "import",
+            ))
+
+            exists = session.exec(
+                select(Application).where(
+                    Application.posting_id == posting.id,
+                    Application.user_id == current.id,
+                )
+            ).first()
+            if exists:
+                skipped += 1
+                continue
+
+            status = _parse_status(_cell(row, header_map, "status"))
+            applied_at = _parse_date(_cell(row, header_map, "applied_at"))
+
+            app = Application(
+                user_id=current.id, posting_id=posting.id, status=status,
+                priority=_parse_priority(_cell(row, header_map, "priority")),
+                follow_up_date=_parse_date(_cell(row, header_map, "follow_up_date")),
+                applied_at=applied_at or utcnow(),
+                notes=_cell(row, header_map, "notes"),
+            )
+            session.add(app)
+            session.commit()
+            session.refresh(app)
+
+            session.add(StatusEvent(application_id=app.id, status=status,
+                                    at=applied_at or utcnow()))
             session.commit()
             imported += 1
         except Exception as e:  # keep going; report the bad row

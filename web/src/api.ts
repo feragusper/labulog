@@ -203,11 +203,11 @@ export const api = {
     URL.revokeObjectURL(url);
   },
 
-  importCsv: async (file: File): Promise<ImportResult> => {
+  importApplications: async (file: File): Promise<ImportResult> => {
     const form = new FormData();
     form.append("file", file);
     // No Content-Type header: the browser sets the multipart boundary.
-    const res = await fetch("/api/import/csv", {
+    const res = await fetch("/api/import/applications", {
       method: "POST",
       headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
       body: form,
