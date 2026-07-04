@@ -423,6 +423,59 @@ def _parse_salary_period(value: Optional[str]) -> str:
     return "yearly"
 
 
+_SAL_NUM_RE = re.compile(r"\d[\d.,]*\s*[kK]?")
+
+
+def _salary_num(tok: str) -> Optional[int]:
+    """'50k' -> 50000, '3.000' / '3,000' -> 3000, '1.5k' -> 1500."""
+    tok = tok.strip().lower().replace(" ", "")
+    if tok.endswith("k"):
+        try:
+            return int(round(float(tok[:-1].replace(",", ".")) * 1000))
+        except ValueError:
+            return None
+    digits = re.sub(r"[^\d]", "", tok)
+    return int(digits) if digits else None
+
+
+def _parse_salary_cell(raw: Optional[str]):
+    """Free-text 'Salario' cell -> (min, max, currency, period) or None.
+
+    - one number -> min == max; two numbers -> min = lower, max = higher
+    - '50k' -> 50000
+    - USD (or $ / dólar) -> USD; otherwise EUR (the default)
+    - '/h' hourly, '/m'/'/month' monthly, '/y'/'/year' or nothing -> yearly
+    - filler words 'puse'/'dice' are ignored; 'no dice nada' -> unknown
+    """
+    if not raw:
+        return None
+    low = str(raw).strip().lower()
+    if not low or "no dice nada" in low:
+        return None
+    for filler in ("puse", "dice"):
+        low = low.replace(filler, " ")
+
+    nums = [n for n in (_salary_num(t) for t in _SAL_NUM_RE.findall(low)) if n]
+    if not nums:
+        return None
+
+    if any(s in low for s in ("usd", "u$s", "us$", "dolar", "dólar", "$")):
+        currency = "USD"
+    elif "eur" in low or "€" in low:
+        currency = "EUR"
+    else:
+        currency = "EUR"
+
+    if re.search(r"/\s*h|\bhora|\bhour|/hr", low):
+        period = "hourly"
+    elif re.search(r"/\s*mo|/\s*mes|/\s*m\b|month|mensual|\bmes\b", low):
+        period = "monthly"
+    else:
+        period = "yearly"
+
+    return (min(nums), max(nums), currency, period)
+
+
 def _parse_int(value: Optional[str]) -> Optional[int]:
     if not value:
         return None
@@ -530,21 +583,30 @@ async def import_applications(
 
             salary_min = _parse_int(_cell(row, header_map, "salary_min"))
             salary_max = _parse_int(_cell(row, header_map, "salary_max"))
-            single = _parse_int(_cell(row, header_map, "salary"))
-            if single and not salary_min and not salary_max:
-                salary_min = salary_max = single
+            currency = _cell(row, header_map, "currency")
+            period_col = _cell(row, header_map, "salary_period")
+
+            # Single free-text "Salario" column: parse amount(s), currency, period.
+            raw_salary = _cell(row, header_map, "salary")
+            parsed_salary = _parse_salary_cell(raw_salary)
+            if parsed_salary and not salary_min and not salary_max:
+                salary_min, salary_max, sal_currency, sal_period = parsed_salary
+                currency = currency or sal_currency
+                period_col = period_col or sal_period
 
             status = _parse_status(_cell(row, header_map, "status"))
             applied_at = _parse_date(_cell(row, header_map, "applied_at"))
             follow_up = _parse_date(_cell(row, header_map, "follow_up_date"))
             priority = _parse_priority(_cell(row, header_map, "priority"))
             notes = _cell(row, header_map, "notes")
+            # Keep the raw salary text by appending it to the notes.
+            if raw_salary:
+                notes = f"{notes}\n{raw_salary}" if notes else raw_salary
             location = _cell(row, header_map, "location")
             country = _cell(row, header_map, "country")
             industry = _cell(row, header_map, "industry")
             commitment = _parse_commitment(_cell(row, header_map, "commitment"))
-            salary_period = _parse_salary_period(_cell(row, header_map, "salary_period"))
-            currency = _cell(row, header_map, "currency")
+            salary_period = _parse_salary_period(period_col)
             source = _cell(row, header_map, "source") or "import"
 
             posting = upsert_posting(session, PostingCreate(
