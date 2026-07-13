@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type PendingRow, type Priority } from "../api";
 import {
-  Badge, commitmentLabel, COMMITMENTS, furthestStage, PriorityBadge, PRIORITIES,
+  Badge, commitmentLabel, COMMITMENTS, furthestStage, localDateInput, PriorityBadge, PRIORITIES,
   rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS, STATUSES,
   statusColorClass, statusLabel, TableSkeleton,
 } from "../components/ui";
@@ -540,7 +540,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
     commitment: "full-time", salary_period: "yearly",
     salary_min: "", salary_max: "", currency: "USD", notes: "",
     status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
-    applied_at: new Date().toISOString().slice(0, 10),
+    applied_at: localDateInput(new Date()),
   });
   const [contacts, setContacts] = useState<{ name: string; role: string; stage: string }[]>([]);
   const [error, setError] = useState("");

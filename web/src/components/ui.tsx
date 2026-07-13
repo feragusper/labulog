@@ -102,6 +102,13 @@ export function pct(n: number) {
   return `${Math.round(n * 100)}%`;
 }
 
+// YYYY-MM-DD in *local* time, for <input type="date">. Never use
+// toISOString() for this: it converts to UTC and can shift the day.
+export function localDateInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 // No real interview durations are tracked; estimate total time from round count.
 export const HOURS_PER_INTERVIEW = 1;
 

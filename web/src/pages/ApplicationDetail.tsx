@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import {
-  Badge, commitmentLabel, COMMITMENTS, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, PanelSkeleton,
+  Badge, commitmentLabel, COMMITMENTS, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, localDateInput, PanelSkeleton,
   PIPELINE, PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS,
   Skeleton, STATUSES, statusLabel, TERMINAL,
 } from "../components/ui";
@@ -20,7 +20,7 @@ function daysBetween(a: number, b: number) {
 function toDateInput(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
-  return isNaN(+d) ? "" : d.toISOString().slice(0, 10);
+  return isNaN(+d) ? "" : localDateInput(d);
 }
 function fromDateInput(v: string): string | null {
   return v ? `${v}T00:00:00` : null;
@@ -406,7 +406,7 @@ function EventForm({
 }) {
   const { t } = useI18n();
   const [status, setStatus] = useState<AppStatus>(initial?.status ?? "applied");
-  const [date, setDate] = useState(initial?.date ?? new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(initial?.date ?? localDateInput(new Date()));
   const [note, setNote] = useState(initial?.note ?? "");
   const [setCurrent, setSetCurrent] = useState(true);
 
