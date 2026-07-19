@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Labulog — Job-application tracker + market intel</title>
+<meta name="description" content="Labulog: follow every job application through its pipeline, measure your funnel, and cross-check any posting by URL to know if you already applied — anti ghost-job." />
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --panel-2: #1f2330;
+    --border: #2a2f3a;
+    --text: #e6e8ee;
+    --muted: #9aa3b2;
+    --accent: #5b8cff;
+    --green: #3ecf8e;
+    --yellow: #f5c542;
+    --red: #f06363;
+    --radius: 14px;
+    --maxw: 1000px;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6fa;
+    --panel: #ffffff;
+    --panel-2: #eef1f7;
+    --border: #d9dee8;
+    --text: #1a1f29;
+    --muted: #5f6b7c;
+    --accent: #3b6fe0;
+    --green: #1f9d63;
+    --yellow: #b8860b;
+    --red: #d64545;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+  /* Nav */
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 16px; height: 60px; }
+  .brand { font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: 9px; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px;
+  }
+  .nav-links { display: flex; gap: 20px; margin-left: auto; align-items: center; }
+  .nav-links a.navlink { color: var(--muted); font-size: 0.92rem; }
+  .nav-links a.navlink:hover { color: var(--text); text-decoration: none; }
+  .toggles { display: flex; gap: 8px; }
+  .toggle {
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); border-radius: 8px; padding: 6px 10px;
+    font-size: 0.82rem; cursor: pointer; font-weight: 600;
+  }
+  .toggle:hover { border-color: var(--accent); }
+  @media (max-width: 720px) { .nav-links a.navlink { display: none; } }
+
+  /* Hero */
+  header.hero { padding: 76px 0 60px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% 0 auto 0; height: 460px;
+    background: radial-gradient(60% 100% at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+  .pill {
+    display: inline-block; font-size: 0.78rem; font-weight: 600;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 22px;
+  }
+  h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 18px; }
+  .grad { background: linear-gradient(120deg, var(--accent), var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--muted); max-width: 660px; margin: 0 auto 30px; }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px; border-radius: 10px; font-weight: 600; font-size: 0.98rem;
+    border: 1px solid var(--border); cursor: pointer;
+  }
+  .btn:hover { text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: var(--panel); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--accent); }
+
+  /* Sections */
+  section { padding: 56px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.02em; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 34px; max-width: 640px; }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 1.06rem; display: flex; align-items: center; gap: 9px; }
+  .card p { margin: 0; color: var(--muted); font-size: 0.94rem; }
+  .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; font-size: 16px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+  /* Stack table */
+  .stack { display: grid; gap: 10px; }
+  .stack-row {
+    display: grid; grid-template-columns: 160px 1fr; gap: 14px; align-items: baseline;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .stack-row:last-child { border-bottom: 0; }
+  .stack-row .k { font-weight: 600; color: var(--text); }
+  .stack-row .v { color: var(--muted); font-size: 0.94rem; }
+  .tag {
+    display: inline-block; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 0.82rem; color: var(--text);
+  }
+  @media (max-width: 560px) { .stack-row { grid-template-columns: 1fr; gap: 4px; } }
+
+  /* Architecture */
+  pre.arch {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5;
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; color: var(--text);
+  }
+
+  /* Motivation */
+  .quote {
+    border-left: 3px solid var(--accent); padding: 4px 0 4px 20px;
+    color: var(--text); font-size: 1.1rem; margin: 0 0 20px;
+  }
+
+  /* Steps */
+  .steps { counter-reset: s; display: grid; gap: 14px; }
+  .step { display: flex; gap: 14px; align-items: flex-start; }
+  .step .n {
+    counter-increment: s; flex: none; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--border); display: grid; place-items: center;
+    font-weight: 700; font-size: 0.9rem; color: var(--accent);
+  }
+  .step .n::before { content: counter(s); }
+  .step .body h3 { margin: 3px 0 2px; font-size: 1rem; }
+  .step .body p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+
+  footer { border-top: 1px solid var(--border); padding: 34px 0; color: var(--muted); font-size: 0.9rem; }
+  .foot-inner { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center; }
+
+  [data-lang-es] { display: none; }
+  :root[data-lang="es"] [data-lang-en] { display: none; }
+  :root[data-lang="es"] [data-lang-es] { display: revert; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="logo">L</span> Labulog</div>
+    <div class="nav-links">
+      <a class="navlink" href="#features"><span data-lang-en>Features</span><span data-lang-es>Funciones</span></a>
+      <a class="navlink" href="#stack"><span data-lang-en>Stack</span><span data-lang-es>Stack</span></a>
+      <a class="navlink" href="#architecture"><span data-lang-en>Architecture</span><span data-lang-es>Arquitectura</span></a>
+      <a class="navlink" href="#why"><span data-lang-en>Motivation</span><span data-lang-es>Motivación</span></a>
+      <div class="toggles">
+        <button class="toggle" id="langBtn" title="Language">ES</button>
+        <button class="toggle" id="themeBtn" title="Theme">◐</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="pill" data-lang-en>Job-application tracker + market intel</span>
+    <span class="pill" data-lang-es>Tracker de postulaciones + inteligencia de mercado</span>
+
+    <h1>
+      <span data-lang-en>Every application, <span class="grad">under control</span>.</span>
+      <span data-lang-es>Cada postulación, <span class="grad">bajo control</span>.</span>
+    </h1>
+
+    <p class="lede">
+      <span data-lang-en>Follow every job application through its pipeline, reconstruct the timeline of each process, measure your funnel — and cross-check any posting by URL to know whether you already applied and how it went. <strong>Anti ghost-job.</strong></span>
+      <span data-lang-es>Seguí cada postulación por su pipeline, reconstruí la línea de tiempo de cada proceso, medí tu embudo — y chequeá cualquier aviso por URL para saber si ya aplicaste y cómo terminó. <strong>Anti ghost-job.</strong></span>
+    </p>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="https://labulog.onrender.com" target="_blank" rel="noopener">
+        <span data-lang-en>Open the live app →</span><span data-lang-es>Abrir la app →</span>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/feragusper/labulog" target="_blank" rel="noopener">
+        <span data-lang-en>View source</span><span data-lang-es>Ver el código</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- WHAT -->
+<section id="about">
+  <div class="wrap">
+    <h2><span data-lang-en>What it's about</span><span data-lang-es>De qué se trata</span></h2>
+    <p class="sub">
+      <span data-lang-en>Job hunting spawns a mess of parallel processes: dozens of companies, each at a different stage, many that ghost you, others that fall through on their own. Labulog brings order.</span>
+      <span data-lang-es>Buscar trabajo genera un caos de procesos paralelos: decenas de empresas, cada una en una etapa distinta, muchas que te hacen ghosting, otras que se caen solas. Labulog pone orden.</span>
+    </p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" style="border-top:0; padding-top:0;">
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h3><span class="ic">🪜</span> <span data-lang-en>Pipeline tracking</span><span data-lang-es>Seguimiento del pipeline</span></h3>
+        <p><span data-lang-en>Granular stages: saved → applied → first contact → screening → technical → manager → proposal → offer → accepted, plus terminal outcomes (rejected, cancelled, ghosted, withdrawn).</span><span data-lang-es>Etapas granulares: guardada → aplicada → primer contacto → screening → técnica → manager → propuesta → oferta → aceptada, más resultados finales (rechazada, cancelada, ghosteada, retirada).</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">🕰️</span> <span data-lang-en>Per-application timeline</span><span data-lang-es>Timeline por postulación</span></h3>
+        <p><span data-lang-en>Every stage change is a dated event with a note. Full CRUD to fix the history.</span><span data-lang-es>Cada cambio de etapa es un evento con fecha y nota. CRUD completo para corregir el historial.</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">📊</span> <span data-lang-en>Metrics &amp; funnel</span><span data-lang-es>Métricas y embudo</span></h3>
+        <p><span data-lang-en>Response rate, interview rate, rounds, estimated interview time, average process length, overdue follow-ups.</span><span data-lang-es>Tasa de respuesta, tasa de entrevista, rondas, tiempo estimado de entrevistas, duración media del proceso, seguimientos vencidos.</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">👻</span> <span data-lang-en>Anti ghost-job lookup</span><span data-lang-es>Búsqueda anti ghost-job</span></h3>
+        <p><span data-lang-en>Paste a posting URL: it tells you whether you already applied and what state it ended in. Postings are global market data; applications stay private.</span><span data-lang-es>Pegá la URL de un aviso: te dice si ya aplicaste y en qué estado terminó. Los avisos son datos de mercado globales; tus postulaciones quedan privadas.</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">🗂️</span> <span data-lang-en>List or Kanban</span><span data-lang-es>Lista o Kanban</span></h3>
+        <p><span data-lang-en>A sortable, filterable list — or a Kanban board with drag-between-stages.</span><span data-lang-es>Una lista ordenable y filtrable — o un tablero Kanban con arrastre entre etapas.</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">🔁</span> <span data-lang-en>CSV import / export</span><span data-lang-es>Import / export CSV</span></h3>
+        <p><span data-lang-en>Import rebuilds the timeline from date columns, parses salaries, and infers the outcome from free text. Export to CSV.</span><span data-lang-es>La importación reconstruye el timeline desde columnas de fecha, parsea salarios e infiere el resultado del texto libre. Exportación a CSV.</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">🌗</span> <span data-lang-en>Polished UX</span><span data-lang-es>UX cuidada</span></h3>
+        <p><span data-lang-en>Light / dark / system themes, English / Spanish, collapsible sidebar, fully responsive.</span><span data-lang-es>Temas claro / oscuro / sistema, inglés / español, sidebar colapsable, totalmente responsive.</span></p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">🔐</span> <span data-lang-en>Multi-user auth</span><span data-lang-es>Auth multi-usuario</span></h3>
+        <p><span data-lang-en>Own JWT + bcrypt, plus Google sign-in. Each user sees only their own applications.</span><span data-lang-es>JWT propio + bcrypt, más inicio de sesión con Google. Cada usuario ve solo sus postulaciones.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section id="stack">
+  <div class="wrap">
+    <h2><span data-lang-en>Technical stack</span><span data-lang-es>Stack técnico</span></h2>
+    <p class="sub"><span data-lang-en>A deliberately boring, single-deployable monolith.</span><span data-lang-es>Un monolito de un solo deploy, deliberadamente aburrido.</span></p>
+    <div class="stack">
+      <div class="stack-row"><div class="k"><span data-lang-en>Backend</span><span data-lang-es>Backend</span></div><div class="v"><span class="tag">Python 3.11</span><span class="tag">FastAPI</span><span class="tag">SQLModel</span><span class="tag">Pydantic</span></div></div>
+      <div class="stack-row"><div class="k"><span data-lang-en>Auth</span><span data-lang-es>Auth</span></div><div class="v"><span class="tag">PyJWT</span><span class="tag">bcrypt</span><span class="tag">Google Identity</span></div></div>
+      <div class="stack-row"><div class="k"><span data-lang-en>Frontend</span><span data-lang-es>Frontend</span></div><div class="v"><span class="tag">React 18</span><span class="tag">TypeScript</span><span class="tag">Vite</span><span class="tag">TanStack Query</span><span class="tag">React Router</span><span class="tag">plain CSS</span></div></div>
+      <div class="stack-row"><div class="k"><span data-lang-en>Database</span><span data-lang-es>Base de datos</span></div><div class="v"><span class="tag">SQLite (dev)</span><span class="tag">PostgreSQL (prod)</span><span class="tag">psycopg 3</span></div></div>
+      <div class="stack-row"><div class="k"><span data-lang-en>Packaging</span><span data-lang-es>Empaquetado</span></div><div class="v"><span class="tag">Multi-stage Docker</span></div></div>
+      <div class="stack-row"><div class="k"><span data-lang-en>Hosting</span><span data-lang-es>Hosting</span></div><div class="v"><span class="tag">Render</span><span class="tag">Neon (Postgres)</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="wrap">
+    <h2><span data-lang-en>Architecture</span><span data-lang-es>Arquitectura</span></h2>
+    <p class="sub">
+      <span data-lang-en><strong>Monolith.</strong> One deployable: FastAPI serves the API under <code>/api/*</code> and the built React SPA on every other route. One repo, one service, one domain. The schema self-heals at boot (idempotent ADD COLUMN + Postgres enum auto-extend) — no manual migrations yet.</span>
+      <span data-lang-es><strong>Monolito.</strong> Un solo deploy: FastAPI sirve la API en <code>/api/*</code> y la SPA de React en el resto de las rutas. Un repo, un servicio, un dominio. El esquema se auto-repara al arrancar (ADD COLUMN idempotente + auto-extensión de enums en Postgres) — todavía sin migraciones manuales.</span>
+    </p>
+    <pre class="arch">┌────────────────────────────────────────────┐
+│  FastAPI (uvicorn)                           │
+│                                              │
+│   /api/auth         login / register / google│
+│   /api/postings     lookup by URL, CRUD      │
+│   /api/applications CRUD + event ABM         │
+│   /api/stats        funnel / metrics         │
+│   /api/import       CSV import               │
+│   /api/health       status + DB dialect      │
+│                                              │
+│   /  (catch-all)    → serves web/dist (SPA)  │
+└───────────────────────┬──────────────────────┘
+                        │  SQLModel
+                ┌───────▼────────┐
+                │   PostgreSQL    │  (SQLite in dev)
+                └────────────────┘</pre>
+    <div class="grid" style="margin-top:18px;">
+      <div class="card"><h3><span data-lang-en>Global market data</span><span data-lang-es>Datos de mercado globales</span></h3><p><span data-lang-en>Companies and job postings are shared across users — <code>JobPosting.url</code> is unique and acts as the lookup key that powers the anti ghost-job feature.</span><span data-lang-es>Empresas y avisos se comparten entre usuarios — <code>JobPosting.url</code> es único y actúa como clave de búsqueda que habilita la función anti ghost-job.</span></p></div>
+      <div class="card"><h3><span data-lang-en>Private applications</span><span data-lang-es>Postulaciones privadas</span></h3><p><span data-lang-en>Applications and their status events belong to one user. Current status lives on the application; the events are the editable history.</span><span data-lang-es>Las postulaciones y sus eventos de estado pertenecen a un usuario. El estado actual vive en la postulación; los eventos son el historial editable.</span></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section id="why">
+  <div class="wrap">
+    <h2><span data-lang-en>Motivation</span><span data-lang-es>Motivación</span></h2>
+    <blockquote class="quote">
+      <span data-lang-en>“Did I already apply to this posting — and how did it go?”</span>
+      <span data-lang-es>“¿Ya apliqué a este aviso — y cómo me fue?”</span>
+    </blockquote>
+    <p class="sub" style="max-width:720px;">
+      <span data-lang-en>Spreadsheets rot fast: they don't reconstruct timelines, don't compute your funnel, and can't tell you a posting is a re-run of one that ghosted you months ago. Labulog was built in the spirit of <a href="https://linprofi.com/" target="_blank" rel="noopener">linprofi</a> — turn the chaos of a job search into data you can actually act on, and expose ghost jobs by treating every posting URL as shared market memory.</span>
+      <span data-lang-es>Las planillas se pudren rápido: no reconstruyen timelines, no calculan tu embudo y no te avisan que un aviso es la reedición de otro que te ghosteó hace meses. Labulog se construyó en el espíritu de <a href="https://linprofi.com/" target="_blank" rel="noopener">linprofi</a> — convertir el caos de la búsqueda en datos accionables, y exponer los ghost jobs tratando cada URL de aviso como memoria de mercado compartida.</span>
+    </p>
+  </div>
+</section>
+
+<!-- RUN -->
+<section id="run">
+  <div class="wrap">
+    <h2><span data-lang-en>Run it locally</span><span data-lang-es>Corrélo localmente</span></h2>
+    <p class="sub"><span data-lang-en>Two terminals for dev; or build the SPA and run the monolith like prod.</span><span data-lang-es>Dos terminales para dev; o buildeá la SPA y corré el monolito como en prod.</span></p>
+    <div class="steps">
+      <div class="step"><div class="n"></div><div class="body"><h3>Backend · <code>:8000</code></h3><p><code>cd api &amp;&amp; python3 -m venv .venv &amp;&amp; source .venv/bin/activate &amp;&amp; pip install -r requirements.txt &amp;&amp; cp .env.example .env &amp;&amp; uvicorn app.main:app --reload</code></p></div></div>
+      <div class="step"><div class="n"></div><div class="body"><h3>Frontend · <code>:5173</code></h3><p><code>cd web &amp;&amp; npm install &amp;&amp; npm run dev</code> — <span data-lang-en>proxies</span><span data-lang-es>proxea</span> <code>/api → :8000</code></p></div></div>
+      <div class="step"><div class="n"></div><div class="body"><h3><span data-lang-en>Monolith (like prod)</span><span data-lang-es>Monolito (como prod)</span></h3><p><code>cd web &amp;&amp; npm run build</code> → <code>cd ../api &amp;&amp; uvicorn app.main:app</code> <span data-lang-en>serves API + SPA on</span><span data-lang-es>sirve API + SPA en</span> <code>:8000</code></p></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>Labulog · <span data-lang-en>built by</span><span data-lang-es>hecho por</span> <a href="https://github.com/feragusper" target="_blank" rel="noopener">feragusper</a></div>
+    <div style="display:flex; gap:18px;">
+      <a href="https://labulog.onrender.com" target="_blank" rel="noopener"><span data-lang-en>Live app</span><span data-lang-es>App en vivo</span></a>
+      <a href="https://github.com/feragusper/labulog" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  var root = document.documentElement;
+  // Theme
+  var savedTheme = localStorage.getItem("labulog-theme")
+    || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  root.setAttribute("data-theme", savedTheme);
+  document.getElementById("themeBtn").onclick = function () {
+    var t = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+    root.setAttribute("data-theme", t);
+    localStorage.setItem("labulog-theme", t);
+  };
+  // Language
+  var savedLang = localStorage.getItem("labulog-lang")
+    || ((navigator.language || "en").toLowerCase().indexOf("es") === 0 ? "es" : "en");
+  function applyLang(l) {
+    root.setAttribute("data-lang", l);
+    root.setAttribute("lang", l);
+    document.getElementById("langBtn").textContent = l === "es" ? "EN" : "ES";
+  }
+  applyLang(savedLang);
+  document.getElementById("langBtn").onclick = function () {
+    var l = root.getAttribute("data-lang") === "es" ? "en" : "es";
+    applyLang(l);
+    localStorage.setItem("labulog-lang", l);
+  };
+</script>
+</body>
+</html>
