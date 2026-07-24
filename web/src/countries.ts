@@ -4,7 +4,9 @@ export interface Country {
 }
 
 // Compact ISO-3166 list (English names). Stored value is the code.
+// "WW" is a non-ISO pseudo-code for remote/global roles, shown with a globe icon.
 export const COUNTRIES: Country[] = [
+  { code: "WW", name: "Worldwide" },
   { code: "AR", name: "Argentina" }, { code: "AU", name: "Australia" },
   { code: "AT", name: "Austria" }, { code: "BE", name: "Belgium" },
   { code: "BO", name: "Bolivia" }, { code: "BR", name: "Brazil" },
@@ -59,6 +61,7 @@ const BY_CODE = new Map(COUNTRIES.map((c) => [c.code, c]));
 const BY_NAME = new Map(COUNTRIES.map((c) => [c.name.toLowerCase(), c.code]));
 
 export function flag(code: string): string {
+  if (code.toUpperCase() === "WW") return "🌍";
   if (!/^[A-Za-z]{2}$/.test(code)) return "";
   return code.toUpperCase().replace(/./g, (ch) =>
     String.fromCodePoint(127397 + ch.charCodeAt(0)));
