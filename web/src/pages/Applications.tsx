@@ -532,16 +532,18 @@ function Board({ apps, hideClosed, onDrop }: {
   );
 }
 
+const emptyApplicationForm = () => ({
+  url: "", title: "", company_name: "", country: "", industry: "", source: "linkedin",
+  commitment: "full-time", salary_period: "yearly",
+  salary_min: "", salary_max: "", currency: "USD", notes: "",
+  status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
+  applied_at: localDateInput(new Date()),
+});
+
 function AddApplication({ onAdded }: { onAdded: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({
-    url: "", title: "", company_name: "", country: "", industry: "", source: "linkedin",
-    commitment: "full-time", salary_period: "yearly",
-    salary_min: "", salary_max: "", currency: "USD", notes: "",
-    status: "applied" as AppStatus, priority: "" as "" | Priority, follow_up_date: "",
-    applied_at: localDateInput(new Date()),
-  });
+  const [f, setF] = useState(emptyApplicationForm);
   const [contacts, setContacts] = useState<{ name: string; role: string; stage: string }[]>([]);
   const [error, setError] = useState("");
 
@@ -588,7 +590,7 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       }),
     onSuccess: () => {
       setOpen(false); setError("");
-      setF({ ...f, url: "", title: "", company_name: "", industry: "", notes: "", follow_up_date: "" });
+      setF(emptyApplicationForm());
       setContacts([]);
       lookup.reset();
       onAdded();
@@ -692,7 +694,9 @@ function AddApplication({ onAdded }: { onAdded: () => void }) {
       <div className="row" style={{ marginTop: 14 }}>
         <button className="shrink" disabled={!f.title || !f.company_name || create.isPending}
           onClick={() => create.mutate()}>{t("common.save")}</button>
-        <button className="shrink ghost" onClick={() => { setOpen(false); setError(""); }}>{t("common.cancel")}</button>
+        <button className="shrink ghost" onClick={() => {
+          setOpen(false); setError(""); setF(emptyApplicationForm()); setContacts([]); lookup.reset();
+        }}>{t("common.cancel")}</button>
       </div>
     </div>
   );
