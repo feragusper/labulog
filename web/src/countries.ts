@@ -55,16 +55,22 @@ const ALIASES: Record<string, string> = {
   francia: "FR", italia: "IT", "países bajos": "NL", holanda: "NL", netherlands: "NL",
   argentina: "AR", brasil: "BR", brazil: "BR", méxico: "MX", mexico: "MX",
   portugal: "PT", irlanda: "IE", suiza: "CH", remoto: "", remote: "",
+  worldwide: "WW", global: "WW", anywhere: "WW",
 };
 
 const BY_CODE = new Map(COUNTRIES.map((c) => [c.code, c]));
 const BY_NAME = new Map(COUNTRIES.map((c) => [c.name.toLowerCase(), c.code]));
 
 export function flag(code: string): string {
-  if (code.toUpperCase() === "WW") return "🌍";
-  if (!/^[A-Za-z]{2}$/.test(code)) return "";
-  return code.toUpperCase().replace(/./g, (ch) =>
-    String.fromCodePoint(127397 + ch.charCodeAt(0)));
+  if (!code) return "";
+  const upper = code.toUpperCase();
+  if (upper === "WW") return "🌍";
+  if (/^[A-Za-z]{2}$/.test(code)) {
+    return upper.replace(/./g, (ch) => String.fromCodePoint(127397 + ch.charCodeAt(0)));
+  }
+  // Legacy free text (e.g. "Worldwide", "Remote", full country names) — try to resolve.
+  const resolved = toCountryCode(code);
+  return resolved ? flag(resolved) : "";
 }
 
 export function countryName(code: string): string {
@@ -74,9 +80,10 @@ export function countryName(code: string): string {
 // Render any stored value (code or legacy free text) as "🏳️ Name".
 export function countryDisplay(value: string | null | undefined): string {
   if (!value) return "—";
-  const c = BY_CODE.get(value.toUpperCase());
+  const code = toCountryCode(value);
+  const c = code && BY_CODE.get(code);
   if (c) return `${flag(c.code)} ${c.name}`;
-  return value; // legacy free text
+  return value; // legacy free text with no match
 }
 
 // Normalize a scraped/free-text value to a code when possible.
