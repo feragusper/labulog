@@ -168,6 +168,7 @@ export interface SimTemplate {
 export interface SimMeta {
   stages: SimStage[];
   topics: { key: string; label: string }[];
+  regions: { key: string; label: string }[];
 }
 
 export interface Funnel {
@@ -289,7 +290,7 @@ export const api = {
   // ---- interview simulations ----
   simMeta: (lang: string) => request<SimMeta>(`/api/sim/meta?lang=${lang}`),
 
-  simGenerate: (payload: { stage: SimStage; topics: string[]; application_id?: number; lang: string }) =>
+  simGenerate: (payload: { stage: SimStage; topics: string[]; region?: string; application_id?: number; lang: string }) =>
     request<{ title: string; stage: SimStage; sections: SimSection[] }>(
       "/api/sim/generate", { method: "POST", body: JSON.stringify(payload) }),
 

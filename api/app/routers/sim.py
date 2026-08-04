@@ -38,6 +38,7 @@ def meta(lang: str = "es", current: User = Depends(get_current_user)):
     return SimMeta(
         stages=["screening", "management", "technical", "mixed"],
         topics=[SimTopicMeta(key=t["key"], label=t.get(lang) or t["en"]) for t in sim_bank.TOPICS],
+        regions=[SimTopicMeta(key=r["key"], label=r.get(lang) or r["en"]) for r in sim_bank.REGIONS],
     )
 
 
@@ -61,7 +62,7 @@ def generate(
                 if not topics and data.stage in ("technical", "mixed"):
                     topics = sim_bank.infer_topics(posting.title, posting.seniority, posting.industry)
 
-    sections = sim_bank.generate_sections(data.stage.value, topics, lang, senior)
+    sections = sim_bank.generate_sections(data.stage.value, topics, lang, senior, data.region)
     return SimGenerateResult(
         title=_stage_title(data.stage.value, lang),
         stage=data.stage,

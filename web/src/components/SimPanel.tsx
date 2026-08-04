@@ -116,6 +116,7 @@ function Builder({ app, onClose, onStarted }: {
 }) {
   const { t, lang } = useI18n();
   const [stage, setStage] = useState<SimStage>("screening");
+  const [region, setRegion] = useState("global");
   const [title, setTitle] = useState("");
   const [topics, setTopics] = useState<string[]>([]);
   const [sections, setSections] = useState<SimSection[]>([]);
@@ -124,9 +125,10 @@ function Builder({ app, onClose, onStarted }: {
   const metaQ = useQuery({ queryKey: ["sim-meta", lang], queryFn: () => api.simMeta(lang) });
   const tplQ = useQuery({ queryKey: ["sim-templates"], queryFn: () => api.listSimTemplates() });
   const allTopics = metaQ.data?.topics ?? [];
+  const regions = metaQ.data?.regions ?? [];
 
   const generate = useMutation({
-    mutationFn: () => api.simGenerate({ stage, topics, application_id: app.id, lang }),
+    mutationFn: () => api.simGenerate({ stage, topics, region, application_id: app.id, lang }),
     onSuccess: (res) => { setSections(res.sections); if (!title) setTitle(res.title); setError(""); },
   });
 
@@ -185,6 +187,20 @@ function Builder({ app, onClose, onStarted }: {
           </button>
         ))}
       </div>
+
+      {regions.length > 0 && (
+        <>
+          <div className="label">{t("sim.region")}</div>
+          <div className="seg" style={{ marginBottom: 4 }}>
+            {regions.map((r) => (
+              <button key={r.key} className={region === r.key ? "active" : ""} onClick={() => setRegion(r.key)} type="button">
+                {r.key === "ar" ? "🇦🇷 " : r.key === "eu" ? "🇪🇺 " : "🌐 "}{r.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted" style={{ fontSize: 12, margin: "2px 0 12px" }}>{t("sim.regionHint")}</p>
+        </>
+      )}
 
       {showTopics && (
         <div style={{ marginBottom: 12 }}>

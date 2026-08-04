@@ -238,11 +238,13 @@ class SimTopicMeta(BaseModel):
 class SimMeta(BaseModel):
     stages: List[str]
     topics: List[SimTopicMeta]
+    regions: List[SimTopicMeta] = []
 
 
 class SimGenerateRequest(BaseModel):
     stage: SimStage = SimStage.technical
     topics: List[str] = []
+    region: str = "global"  # global | ar | eu — flavors the non-technical rounds
     application_id: Optional[int] = None  # infer topics/seniority from its posting
     lang: str = "es"
 
