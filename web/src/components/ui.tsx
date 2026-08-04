@@ -1,23 +1,27 @@
 import type { Application, AppStatus, Priority } from "../api";
 import { useI18n } from "../i18n";
 
+// Statuses offered in pickers. Legacy values ("interview", "proposal") are kept in
+// the AppStatus type and still render (old rows), but are no longer selectable.
 export const STATUSES: AppStatus[] = [
   "saved", "applied", "first_contact", "screening", "technical_interview",
-  "manager_interview", "interview", "proposal", "offer", "accepted",
+  "manager_interview", "offer", "accepted",
   "rejected", "cancelled", "ghosted", "withdrawn",
 ];
 
 // Non-terminal pipeline, in order. Terminal outcomes (accepted/rejected/etc.) sit outside it.
 export const PIPELINE: AppStatus[] = [
   "saved", "applied", "first_contact", "screening",
-  "technical_interview", "manager_interview", "proposal", "offer",
+  "technical_interview", "manager_interview", "offer",
 ];
 export const TERMINAL: AppStatus[] = ["accepted", "rejected", "cancelled", "ghosted", "withdrawn"];
 export const NEGATIVE_TERMINAL: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
 
-// Legacy/generic "interview" ranks alongside the technical-interview step.
+// Legacy values map onto the current pipeline: generic "interview" ranks at the
+// technical-interview step, and "proposal" (dropped) ranks at the offer step.
 export function rankOf(s: AppStatus): number {
   if (s === "interview") return PIPELINE.indexOf("technical_interview");
+  if (s === "proposal") return PIPELINE.indexOf("offer");
   return PIPELINE.indexOf(s);
 }
 

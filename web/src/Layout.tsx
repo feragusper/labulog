@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { auth } from "./api";
 import { useI18n } from "./i18n";
+import {
+  BriefcaseIcon, ChartIcon, ChevronLeftIcon, ChevronRightIcon,
+  HomeIcon, LogOutIcon, SettingsIcon,
+} from "./components/icons";
 
 const COLLAPSE_KEY = "labulog_sidebar_collapsed";
 
-const NAV = [
-  { to: "/", key: "nav.overview", end: true, icon: "▦" },
-  { to: "/applications", key: "nav.applications", icon: "▤" },
-  { to: "/analytics", key: "nav.analytics", icon: "▣" },
-  { to: "/settings", key: "nav.settings", icon: "⚙" },
+const NAV: { to: string; key: string; end?: boolean; Icon: ComponentType<{ size?: number }> }[] = [
+  { to: "/", key: "nav.overview", end: true, Icon: HomeIcon },
+  { to: "/applications", key: "nav.applications", Icon: BriefcaseIcon },
+  { to: "/analytics", key: "nav.analytics", Icon: ChartIcon },
+  { to: "/settings", key: "nav.settings", Icon: SettingsIcon },
 ];
 
 export default function Layout({ email }: { email?: string }) {
@@ -28,7 +32,7 @@ export default function Layout({ email }: { email?: string }) {
         <div className="sidebar-top">
           <div className="sidebar-brand">Labu<span>Log</span></div>
           <button className="collapse-btn" onClick={toggle} title={collapsed ? t("nav.expand") : t("nav.collapse")}>
-            {collapsed ? "»" : "«"}
+            {collapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
           </button>
         </div>
         <nav className="sidebar-nav">
@@ -40,16 +44,16 @@ export default function Layout({ email }: { email?: string }) {
               title={t(n.key)}
               className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
             >
-              <span className="nav-icon">{n.icon}</span>
+              <span className="nav-icon"><n.Icon size={19} /></span>
               <span>{t(n.key)}</span>
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-foot">
           <div className="sidebar-user" title={email}>{email}</div>
-          <button className="ghost" onClick={() => { auth.clear(); location.reload(); }} title={t("nav.logout")}>
+          <button className="ghost logout-btn" onClick={() => { auth.clear(); location.reload(); }} title={t("nav.logout")}>
             <span className="logout-label">{t("nav.logout")}</span>
-            <span className="logout-icon">⏻</span>
+            <span className="logout-icon"><LogOutIcon size={17} /></span>
           </button>
         </div>
       </aside>
