@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import {
@@ -160,6 +160,9 @@ export default function ApplicationDetail() {
 
       {/* ---- contacts ABM ---- */}
       <Contacts app={app} onChange={invalidate} />
+
+      {/* ---- attachments ---- */}
+      <Attachments app={app} onChange={invalidate} />
 
       {/* ---- timeline ABM ---- */}
       <Timeline app={app} onChange={invalidate} />
@@ -330,6 +333,64 @@ function Contacts({ app, onChange }: { app: Application; onChange: () => void })
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function Attachments({ app, onChange }: { app: Application; onChange: () => void }) {
+  const { t } = useI18n();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState("");
+
+  const upload = useMutation({
+    mutationFn: (files: FileList) => api.addAttachments(app.id, files),
+    onSuccess: () => { setError(""); if (fileRef.current) fileRef.current.value = ""; onChange(); },
+    onError: (e: unknown) => setError(e instanceof Error ? e.message : "Error"),
+  });
+  const del = useMutation({
+    mutationFn: (attId: number) => api.deleteAttachment(app.id, attId),
+    onSuccess: onChange,
+  });
+
+  return (
+    <div className="panel">
+      <div className="row" style={{ alignItems: "center" }}>
+        <h2 style={{ margin: 0, flex: 1 }}>{t("attachments.title")}</h2>
+        <button className="shrink" disabled={upload.isPending} onClick={() => fileRef.current?.click()}>
+          {upload.isPending ? t("attachments.uploading") : t("attachments.add")}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => { if (e.target.files?.length) upload.mutate(e.target.files); }}
+        />
+      </div>
+
+      {error && <div className="error" style={{ marginTop: 8 }}>{error}</div>}
+
+      {app.attachments.length === 0 ? (
+        <p className="muted">{t("attachments.none")}</p>
+      ) : (
+        <ul className="contact-list" style={{ marginTop: 12 }}>
+          {app.attachments.map((a) => (
+            <li key={a.id}>
+              <button className="link-btn" onClick={() => api.downloadAttachment(app.id, a)}>{a.filename}</button>
+              <span className="muted"> · {fmtSize(a.size)}</span>
+              <span style={{ flex: 1 }} />
+              <button className="link-btn danger-txt" onClick={() => del.mutate(a.id)}>{t("detail.deleteLink")}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>{t("attachments.hint")}</p>
     </div>
   );
 }

@@ -86,6 +86,14 @@ export interface Contact {
   note: string | null;
 }
 
+export interface Attachment {
+  id: number;
+  filename: string;
+  content_type: string | null;
+  size: number;
+  created_at: string;
+}
+
 export interface Application {
   id: number;
   status: AppStatus;
@@ -101,6 +109,7 @@ export interface Application {
   posting: Posting;
   events: StatusEvent[];
   contacts: Contact[];
+  attachments: Attachment[];
 }
 
 export interface Funnel {
@@ -186,6 +195,35 @@ export const api = {
 
   deleteContact: (appId: number, contactId: number) =>
     request<Application>(`/api/applications/${appId}/contacts/${contactId}`, { method: "DELETE" }),
+
+  addAttachments: async (appId: number, files: FileList | File[]): Promise<Application> => {
+    const form = new FormData();
+    for (const f of Array.from(files)) form.append("files", f);
+    const res = await fetch(`/api/applications/${appId}/attachments`, {
+      method: "POST",
+      headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
+      body: form,
+    });
+    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? "Upload failed");
+    return res.json();
+  },
+
+  deleteAttachment: (appId: number, attId: number) =>
+    request<Application>(`/api/applications/${appId}/attachments/${attId}`, { method: "DELETE" }),
+
+  downloadAttachment: async (appId: number, att: Attachment): Promise<void> => {
+    const res = await fetch(`/api/applications/${appId}/attachments/${att.id}`, {
+      headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
+    });
+    if (!res.ok) throw new ApiError(res.status, "Download failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = att.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 
   lookup: (url: string) =>
     request<Lookup>(`/api/postings/lookup?url=${encodeURIComponent(url)}`),

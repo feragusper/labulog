@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from sqlalchemy import Column, LargeBinary
 from sqlmodel import Field, SQLModel
 
 
@@ -96,6 +97,17 @@ class StatusEvent(SQLModel, table=True):
     status: AppStatus
     at: datetime = Field(default_factory=utcnow)
     note: Optional[str] = None
+
+
+class Attachment(SQLModel, table=True):
+    """A file (PDF, etc.) attached to an application. Blob stored in DB."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    application_id: int = Field(foreign_key="application.id", index=True)
+    filename: str
+    content_type: Optional[str] = None
+    size: int = 0
+    data: bytes = Field(sa_column=Column(LargeBinary))
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Contact(SQLModel, table=True):

@@ -32,6 +32,12 @@ const ES: Dict = {
   "contacts.none": "Sin contactos.",
   "contacts.rolePh": "recruiter / hiring manager / tech lead…",
 
+  "attachments.title": "Adjuntos",
+  "attachments.add": "+ Adjuntar",
+  "attachments.none": "Sin adjuntos.",
+  "attachments.uploading": "Subiendo…",
+  "attachments.hint": "PDF, imágenes, docs — hasta 25 MB c/u",
+
   "lookup.alreadyInline": "Ya aplicaste a esta URL · estado:",
   "nav.logout": "Salir",
   "nav.collapse": "Colapsar",
@@ -250,6 +256,11 @@ const EN: Dict = {
   "contacts.role": "Role",
   "contacts.stage": "Stage",
   "contacts.none": "No contacts.",
+  "attachments.title": "Attachments",
+  "attachments.add": "+ Attach",
+  "attachments.none": "No attachments.",
+  "attachments.uploading": "Uploading…",
+  "attachments.hint": "PDF, images, docs — up to 25 MB each",
   "contacts.rolePh": "recruiter / hiring manager / tech lead…",
 
   "lookup.alreadyInline": "Already applied to this URL · status:",

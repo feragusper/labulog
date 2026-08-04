@@ -2,18 +2,21 @@ import csv
 import io
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import Response, StreamingResponse
 from sqlmodel import Session, select
 
 from ..crud import upsert_posting
 from ..db import get_session
 from ..deps import get_current_user
-from ..models import Application, Company, Contact, JobPosting, StatusEvent, User, utcnow
+from ..models import (
+    Application, Attachment, Company, Contact, JobPosting, StatusEvent, User, utcnow,
+)
 from ..schemas import (
     ApplicationCreate,
     ApplicationRead,
     ApplicationUpdate,
+    AttachmentRead,
     ContactCreate,
     ContactRead,
     ContactUpdate,
@@ -22,6 +25,9 @@ from ..schemas import (
     StatusEventRead,
     StatusEventUpdate,
 )
+
+# 25 MB per file cap.
+MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -40,6 +46,13 @@ def _to_read(session: Session, app: Application) -> ApplicationRead:
     contacts = session.exec(
         select(Contact).where(Contact.application_id == app.id).order_by(Contact.created_at)
     ).all()
+    # Select scalar columns only (skip the blob) to keep the list light.
+    attachments = session.exec(
+        select(Attachment.id, Attachment.filename, Attachment.content_type,
+               Attachment.size, Attachment.created_at)
+        .where(Attachment.application_id == app.id)
+        .order_by(Attachment.created_at)
+    ).all()
     return ApplicationRead(
         id=app.id,
         status=app.status,
@@ -55,6 +68,11 @@ def _to_read(session: Session, app: Application) -> ApplicationRead:
         posting=posting_read,
         events=[StatusEventRead.model_validate(e, from_attributes=True) for e in events],
         contacts=[ContactRead.model_validate(c, from_attributes=True) for c in contacts],
+        attachments=[
+            AttachmentRead(id=a.id, filename=a.filename, content_type=a.content_type,
+                           size=a.size, created_at=a.created_at)
+            for a in attachments
+        ],
     )
 
 
@@ -203,6 +221,66 @@ def delete_contact(
     return _to_read(session, app)
 
 
+# ---- attachments ----
+@router.post("/{app_id}/attachments", response_model=ApplicationRead, status_code=201)
+async def add_attachments(
+    app_id: int,
+    files: List[UploadFile] = File(...),
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    for f in files:
+        raw = await f.read()
+        if not raw:
+            continue
+        if len(raw) > MAX_ATTACHMENT_BYTES:
+            raise HTTPException(status_code=413, detail=f"{f.filename} exceeds 25 MB limit")
+        session.add(Attachment(
+            application_id=app.id,
+            filename=f.filename or "file",
+            content_type=f.content_type,
+            size=len(raw),
+            data=raw,
+        ))
+    session.commit()
+    return _to_read(session, app)
+
+
+@router.get("/{app_id}/attachments/{att_id}")
+def download_attachment(
+    app_id: int,
+    att_id: int,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    att = session.get(Attachment, att_id)
+    if not att or att.application_id != app.id:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    return Response(
+        content=att.data,
+        media_type=att.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{att.filename}"'},
+    )
+
+
+@router.delete("/{app_id}/attachments/{att_id}", response_model=ApplicationRead)
+def delete_attachment(
+    app_id: int,
+    att_id: int,
+    session: Session = Depends(get_session),
+    current: User = Depends(get_current_user),
+):
+    app = _owned_app(session, app_id, current)
+    att = session.get(Attachment, att_id)
+    if not att or att.application_id != app.id:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    session.delete(att)
+    session.commit()
+    return _to_read(session, app)
+
+
 @router.get("/{app_id}", response_model=ApplicationRead)
 def get_application(
     app_id: int,
@@ -314,5 +392,9 @@ def delete_application(
         select(Contact).where(Contact.application_id == app.id)
     ).all():
         session.delete(c)
+    for at in session.exec(
+        select(Attachment).where(Attachment.application_id == app.id)
+    ).all():
+        session.delete(at)
     session.delete(app)
     session.commit()

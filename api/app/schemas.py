@@ -178,6 +178,14 @@ class StatusEventRead(BaseModel):
     note: Optional[str]
 
 
+class AttachmentRead(BaseModel):
+    id: int
+    filename: str
+    content_type: Optional[str]
+    size: int
+    created_at: datetime
+
+
 class ApplicationRead(BaseModel):
     id: int
     status: AppStatus
@@ -193,6 +201,7 @@ class ApplicationRead(BaseModel):
     posting: PostingRead
     events: List[StatusEventRead] = []
     contacts: List[ContactRead] = []
+    attachments: List[AttachmentRead] = []
 
 
 # ---- stats ----
