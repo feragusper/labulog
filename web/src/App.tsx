@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage";
 import Overview from "./pages/Overview";
 import Applications from "./pages/Applications";
 import ApplicationDetail from "./pages/ApplicationDetail";
+import SimRunner from "./pages/SimRunner";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 
@@ -30,6 +31,7 @@ export default function App() {
         <Route index element={<Overview />} />
         <Route path="applications" element={<Applications />} />
         <Route path="applications/:id" element={<ApplicationDetail />} />
+        <Route path="sim/:runId" element={<SimRunner />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />

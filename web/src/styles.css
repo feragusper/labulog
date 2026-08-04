@@ -467,3 +467,130 @@ tr.statusrow.selected td { background: color-mix(in srgb, var(--accent) 12%, tra
   padding: 8px 14px; margin-bottom: 14px;
 }
 .active-filter-chip .link-btn { margin-left: auto; }
+
+/* ================= interview simulations ================= */
+.sim-badge {
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px;
+  font-weight: 500; border: 1px solid var(--border);
+}
+.sim-badge.stage-screening { color: var(--accent); }
+.sim-badge.stage-management { color: var(--yellow); }
+.sim-badge.stage-technical { color: var(--green); }
+.sim-badge.stage-mixed { color: var(--muted); }
+
+.sim-stars { color: var(--yellow); letter-spacing: 1px; }
+.sim-stars-off { color: var(--border); }
+
+.sim-run-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.sim-run-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.sim-run-title { font-weight: 500; }
+.sim-run-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; flex-wrap: wrap; }
+.sim-status { font-size: 12px; }
+.sim-status.s-draft { color: var(--muted); }
+.sim-status.s-in_progress { color: var(--yellow); }
+.sim-status.s-done { color: var(--green); }
+.sim-run-result { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; }
+.sim-run-result .label { margin: 0; }
+
+/* builder */
+.sim-builder {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--panel-2); padding: 16px; margin: 12px 0;
+}
+.sim-topics { display: flex; flex-wrap: wrap; gap: 8px; }
+.sim-chip {
+  background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+  border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer;
+}
+.sim-chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.sim-section-list { display: grid; gap: 12px; }
+.sim-section-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+}
+.sim-section-head { display: flex; align-items: center; gap: 10px; }
+.sim-section-n {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--panel-2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted);
+}
+.sim-section-title { flex: 1; }
+.sim-section-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.sim-section-actions .link-btn { font-size: 13px; }
+.sim-section-fields { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.sim-section-fields > div { flex: 1; min-width: 120px; }
+.sim-section-fields .sim-min-field { flex: 0 0 80px; min-width: 70px; }
+.sim-questions { margin-top: 10px; }
+.sim-q-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.sim-q-row input { flex: 1; }
+.sim-q-row .link-btn { font-size: 16px; line-height: 1; flex-shrink: 0; }
+
+/* runner */
+.sim-runner { max-width: 780px; }
+.sim-runner-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sim-progress { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+.sim-progress-step { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sim-progress-step .dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--border); flex-shrink: 0;
+}
+.sim-progress-step.done .dot { background: var(--green); }
+.sim-progress-step.current .dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.sim-progress-step.current { color: var(--text); }
+.sim-progress-step .lbl { white-space: nowrap; }
+
+.sim-stage-panel { padding: 22px; }
+.sim-stage-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sim-stage-meta { display: flex; flex-direction: column; gap: 6px; }
+.sim-kind-tag {
+  align-self: flex-start; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 2px 8px;
+}
+.sim-stage-title { font-size: 20px; margin: 14px 0 12px; }
+
+.sim-timer {
+  display: flex; flex-direction: column; align-items: flex-end;
+  border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; min-width: 96px;
+}
+.sim-timer-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.sim-timer-clock { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.sim-timer.warn { border-color: var(--yellow); }
+.sim-timer.warn .sim-timer-clock { color: var(--yellow); }
+.sim-timer.over { border-color: var(--red); }
+.sim-timer.over .sim-timer-clock, .sim-timer.over .sim-timer-label { color: var(--red); }
+.sim-timer.live { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.sim-ready { text-align: center; padding: 24px 0; }
+.sim-ready p { margin-bottom: 14px; }
+
+.sim-prompt-text {
+  font-size: 16px; line-height: 1.55; white-space: pre-wrap;
+  background: var(--panel-2); border-left: 3px solid var(--accent);
+  border-radius: 6px; padding: 14px 16px;
+}
+.sim-live-hint { font-size: 13px; margin-top: 12px; }
+
+.sim-q-list { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 10px; }
+.sim-q-list li { line-height: 1.5; }
+.sim-q-list.checklist { list-style: none; padding-left: 0; }
+.sim-q-list.checklist li.checked { opacity: .6; }
+.sim-q-check { display: flex; align-items: flex-start; gap: 10px; margin: 0; cursor: pointer; color: var(--text); font-size: 15px; }
+.sim-q-check input { width: auto; margin-top: 3px; flex-shrink: 0; }
+
+.sim-report { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+.sim-report h3 { font-size: 15px; margin: 0 0 12px; }
+.sim-rating { display: flex; align-items: center; gap: 4px; }
+.sim-rating-btn {
+  background: none; border: none; padding: 0 2px; font-size: 26px; line-height: 1;
+  color: var(--border); cursor: pointer;
+}
+.sim-rating-btn.on { color: var(--yellow); }
+.sim-rating-lbl { margin-left: 8px; font-size: 13px; }
+
+.sim-summary-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.sim-summary-list li {
+  display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border);
+}
+.sim-summary-title { font-weight: 500; }

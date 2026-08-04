@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
-from .models import AppStatus, Priority
+from .models import AppStatus, Priority, SimRunStatus, SimStage
 
 
 # ---- auth ----
@@ -212,6 +212,87 @@ class FunnelStats(BaseModel):
     interview_rate: float
     offer_rate: float
     ghost_count: int
+
+
+# ---- interview simulations ----
+class SimQuestion(BaseModel):
+    q: str
+    a: Optional[str] = None
+
+
+class SimSection(BaseModel):
+    """One composable, timed block of a simulation."""
+    title: str
+    kind: str = "theory"  # theory | live_coding | open
+    topic: Optional[str] = None
+    duration_seconds: int = 600
+    prompt: Optional[str] = None                 # live_coding / open
+    questions: List[SimQuestion] = []            # theory / open
+
+
+class SimTopicMeta(BaseModel):
+    key: str
+    label: str
+
+
+class SimMeta(BaseModel):
+    stages: List[str]
+    topics: List[SimTopicMeta]
+
+
+class SimGenerateRequest(BaseModel):
+    stage: SimStage = SimStage.technical
+    topics: List[str] = []
+    application_id: Optional[int] = None  # infer topics/seniority from its posting
+    lang: str = "es"
+
+
+class SimGenerateResult(BaseModel):
+    title: str
+    stage: SimStage
+    sections: List[SimSection]
+
+
+class SimTemplateCreate(BaseModel):
+    title: str
+    stage: SimStage = SimStage.technical
+    sections: List[SimSection] = []
+
+
+class SimTemplateRead(BaseModel):
+    id: int
+    title: str
+    stage: SimStage
+    sections: List[SimSection]
+    created_at: datetime
+
+
+class SimRunCreate(BaseModel):
+    application_id: int
+    title: str
+    stage: SimStage = SimStage.technical
+    sections: List[SimSection] = []
+
+
+class SimRunUpdate(BaseModel):
+    title: Optional[str] = None
+    status: Optional[SimRunStatus] = None
+    results: Optional[dict] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class SimRunRead(BaseModel):
+    id: int
+    application_id: int
+    title: str
+    stage: SimStage
+    status: SimRunStatus
+    sections: List[SimSection]
+    results: dict = {}
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    created_at: datetime
 
 
 # Resolve forward reference (ContactCreate defined after ApplicationCreate).

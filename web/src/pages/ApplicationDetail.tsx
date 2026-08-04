@@ -8,6 +8,7 @@ import {
   Skeleton, STATUSES, statusLabel, TERMINAL,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
+import SimPanel from "../components/SimPanel";
 import { countryDisplay } from "../countries";
 import { useI18n } from "../i18n";
 
@@ -157,6 +158,9 @@ export default function ApplicationDetail() {
           <Meta label={t("detail.interviewEst")}>{interviewRounds ? `~${interviewHours} h` : "—"}</Meta>
         </div>
       </div>
+
+      {/* ---- interview simulations ---- */}
+      <SimPanel app={app} />
 
       {/* ---- contacts ABM ---- */}
       <Contacts app={app} onChange={invalidate} />

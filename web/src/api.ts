@@ -112,6 +112,64 @@ export interface Application {
   attachments: Attachment[];
 }
 
+// ---- interview simulations ----
+export type SimStage = "screening" | "management" | "technical" | "mixed";
+export type SimRunStatus = "draft" | "in_progress" | "done";
+export type SectionKind = "theory" | "live_coding" | "open";
+
+export interface SimQuestion {
+  q: string;
+  a: string | null;
+}
+
+export interface SimSection {
+  title: string;
+  kind: SectionKind;
+  topic: string | null;
+  duration_seconds: number;
+  prompt: string | null;
+  questions: SimQuestion[];
+}
+
+export interface SimSectionResult {
+  elapsed_seconds: number;
+  rating: number | null; // 1..5 self-rating
+  notes: string;
+  checked: boolean[]; // per-question "I nailed it" (theory/open)
+}
+
+export interface SimResults {
+  sections: SimSectionResult[];
+  overall_rating: number | null;
+  overall_notes: string;
+}
+
+export interface SimRun {
+  id: number;
+  application_id: number;
+  title: string;
+  stage: SimStage;
+  status: SimRunStatus;
+  sections: SimSection[];
+  results: Partial<SimResults>;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface SimTemplate {
+  id: number;
+  title: string;
+  stage: SimStage;
+  sections: SimSection[];
+  created_at: string;
+}
+
+export interface SimMeta {
+  stages: SimStage[];
+  topics: { key: string; label: string }[];
+}
+
 export interface Funnel {
   total: number;
   by_status: Record<AppStatus, number>;
@@ -227,6 +285,35 @@ export const api = {
 
   lookup: (url: string) =>
     request<Lookup>(`/api/postings/lookup?url=${encodeURIComponent(url)}`),
+
+  // ---- interview simulations ----
+  simMeta: (lang: string) => request<SimMeta>(`/api/sim/meta?lang=${lang}`),
+
+  simGenerate: (payload: { stage: SimStage; topics: string[]; application_id?: number; lang: string }) =>
+    request<{ title: string; stage: SimStage; sections: SimSection[] }>(
+      "/api/sim/generate", { method: "POST", body: JSON.stringify(payload) }),
+
+  listSimRuns: (applicationId: number) =>
+    request<SimRun[]>(`/api/sim/runs?application_id=${applicationId}`),
+
+  getSimRun: (runId: number) => request<SimRun>(`/api/sim/runs/${runId}`),
+
+  createSimRun: (payload: { application_id: number; title: string; stage: SimStage; sections: SimSection[] }) =>
+    request<SimRun>("/api/sim/runs", { method: "POST", body: JSON.stringify(payload) }),
+
+  updateSimRun: (runId: number, payload: Partial<{ title: string; status: SimRunStatus; results: Partial<SimResults>; started_at: string; completed_at: string }>) =>
+    request<SimRun>(`/api/sim/runs/${runId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+
+  deleteSimRun: (runId: number) =>
+    request<void>(`/api/sim/runs/${runId}`, { method: "DELETE" }),
+
+  listSimTemplates: () => request<SimTemplate[]>("/api/sim/templates"),
+
+  createSimTemplate: (payload: { title: string; stage: SimStage; sections: SimSection[] }) =>
+    request<SimTemplate>("/api/sim/templates", { method: "POST", body: JSON.stringify(payload) }),
+
+  deleteSimTemplate: (id: number) =>
+    request<void>(`/api/sim/templates/${id}`, { method: "DELETE" }),
 
   funnel: () => request<Funnel>("/api/stats/funnel"),
 

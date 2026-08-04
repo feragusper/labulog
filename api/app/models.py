@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
-from sqlalchemy import Column, LargeBinary
+from sqlalchemy import JSON, Column, LargeBinary
 from sqlmodel import Field, SQLModel
 
 
@@ -118,4 +118,48 @@ class Contact(SQLModel, table=True):
     role: Optional[str] = None              # recruiter, hiring manager, tech lead, …
     stage: Optional[AppStatus] = None       # stage where they got involved
     note: Optional[str] = None
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+# ---- interview simulations / prep ----
+class SimStage(str, Enum):
+    screening = "screening"
+    management = "management"
+    technical = "technical"
+    mixed = "mixed"
+
+
+class SimRunStatus(str, Enum):
+    draft = "draft"
+    in_progress = "in_progress"
+    done = "done"
+
+
+class SimTemplate(SQLModel, table=True):
+    """A reusable, named group of sections ('armame un standard'). Private per user.
+    `sections` is a JSON list of section snapshots (see the section schema in
+    schemas.py); each section carries its own kind, topic and duration."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    title: str
+    stage: SimStage = SimStage.technical
+    sections: List = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class SimRun(SQLModel, table=True):
+    """An actual simulation attached to an application. Sections are snapshotted at
+    creation time so later template edits don't rewrite history. Timer runs on the
+    client; we persist elapsed time and the candidate's self-reported results."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    application_id: int = Field(foreign_key="application.id", index=True)
+    title: str
+    stage: SimStage = SimStage.technical
+    status: SimRunStatus = SimRunStatus.draft
+    sections: List = Field(default_factory=list, sa_column=Column(JSON))
+    # results: {"sections": [{elapsed_seconds, rating, notes, checked:[bool]}], "overall_rating", "overall_notes"}
+    results: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utcnow)
