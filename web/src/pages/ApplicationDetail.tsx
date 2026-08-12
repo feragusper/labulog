@@ -3,8 +3,8 @@ import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import {
-  Badge, commitmentLabel, COMMITMENTS, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, localDateInput, PanelSkeleton,
-  PIPELINE, PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS,
+  Badge, commitmentLabel, COMMITMENTS, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, localDateInput, NEGATIVE_TERMINAL,
+  PanelSkeleton, PIPELINE, PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS,
   Skeleton, STATUSES, statusLabel, TERMINAL,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
@@ -120,20 +120,10 @@ export default function ApplicationDetail() {
         )}
       </div>
 
-      {/* ---- stepper ---- */}
+      {/* ---- stage funnel ---- */}
       <div className="panel">
         <h2>{t("detail.stages")}</h2>
-        <div className="stepper">
-          {PIPELINE.map((s, i) => {
-            const done = i <= reachedIdx;
-            return (
-              <div key={s} className={`step${done ? " done" : ""}`}>
-                <div className="step-dot">{done ? "✓" : ""}</div>
-                <div className="step-label">{statusLabel(t, s)}</div>
-              </div>
-            );
-          })}
-        </div>
+        <StageFunnel app={app} reachedIdx={reachedIdx} terminal={terminal} />
         {terminal && (
           <div style={{ marginTop: 12 }}>{t("detail.finalResult")} <Badge status={terminal} /></div>
         )}
@@ -178,6 +168,47 @@ export default function ApplicationDetail() {
         </div>
       )}
     </div>
+  );
+}
+
+function StageFunnel({ app, reachedIdx, terminal }: {
+  app: Application; reachedIdx: number; terminal: AppStatus | null;
+}) {
+  const { t } = useI18n();
+
+  // Earliest date each pipeline stage was reached (from events + applied_at).
+  const stageDate = new Map<number, number>();
+  const mark = (r: number, ts: number) => {
+    if (r < 0) return;
+    const cur = stageDate.get(r);
+    if (cur === undefined || ts < cur) stageDate.set(r, ts);
+  };
+  for (const e of app.events) mark(rankOf(e.status), +new Date(e.at));
+  if (app.applied_at) mark(PIPELINE.indexOf("applied"), +new Date(app.applied_at));
+
+  const stopped = terminal !== null && NEGATIVE_TERMINAL.includes(terminal);
+
+  return (
+    <ol className="funnel">
+      {PIPELINE.map((s, i) => {
+        const done = i <= reachedIdx;
+        const here = i === reachedIdx && terminal === null;
+        const date = stageDate.get(i);
+        return (
+          <li key={s} className={`funnel-step${done ? " done" : ""}`}>
+            <span className="funnel-dot">{done ? "✓" : ""}</span>
+            <span className="funnel-label">{statusLabel(t, s)}</span>
+            {date !== undefined && (
+              <span className="funnel-date">{fmtDate(new Date(date).toISOString())}</span>
+            )}
+            {here && <span className="funnel-here">{t("detail.youAreHere")}</span>}
+            {i === reachedIdx && stopped && (
+              <span className="funnel-here stopped">{t("detail.stoppedHere")}</span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
