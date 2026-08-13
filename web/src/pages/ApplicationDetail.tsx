@@ -189,26 +189,28 @@ function StageFunnel({ app, reachedIdx, terminal }: {
   const stopped = terminal !== null && NEGATIVE_TERMINAL.includes(terminal);
 
   return (
-    <ol className="funnel">
-      {PIPELINE.map((s, i) => {
-        const done = i <= reachedIdx;
-        const here = i === reachedIdx && terminal === null;
-        const date = stageDate.get(i);
-        return (
-          <li key={s} className={`funnel-step${done ? " done" : ""}`}>
-            <span className="funnel-dot">{done ? "✓" : ""}</span>
-            <span className="funnel-label">{statusLabel(t, s)}</span>
-            {date !== undefined && (
-              <span className="funnel-date">{fmtDate(new Date(date).toISOString())}</span>
-            )}
-            {here && <span className="funnel-here">{t("detail.youAreHere")}</span>}
-            {i === reachedIdx && stopped && (
-              <span className="funnel-here stopped">{t("detail.stoppedHere")}</span>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+    <div className="stage-funnel-wrap">
+      <ol className="stage-funnel">
+        {PIPELINE.map((s, i) => {
+          const done = i <= reachedIdx;
+          const here = i === reachedIdx && terminal === null;
+          const date = stageDate.get(i);
+          return (
+            <li key={s} className={`stage-step${done ? " done" : ""}`}>
+              <span className="stage-dot">{done ? "✓" : ""}</span>
+              <span className="stage-label">{statusLabel(t, s)}</span>
+              {date !== undefined && (
+                <span className="stage-date">{fmtDate(new Date(date).toISOString())}</span>
+              )}
+              {here && <span className="stage-here">{t("detail.youAreHere")}</span>}
+              {i === reachedIdx && stopped && (
+                <span className="stage-here stopped">{t("detail.stoppedHere")}</span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 

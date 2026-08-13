@@ -336,32 +336,37 @@ tr.statusrow.selected td { background: color-mix(in srgb, var(--accent) 12%, tra
   gap: 16px; margin-bottom: 14px;
 }
 
-.funnel { list-style: none; margin: 0; padding: 0; }
-.funnel-step {
-  display: flex; align-items: center; gap: 12px;
-  position: relative; padding: 7px 0 7px 2px;
+.stage-funnel-wrap { overflow-x: auto; }
+.stage-funnel {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; align-items: flex-start; gap: 0; min-width: 100%;
 }
-.funnel-step:not(:last-child)::before {
-  content: ""; position: absolute; left: 15px; top: 35px; bottom: -3px;
-  width: 2px; background: var(--border);
+.stage-step {
+  flex: 1 0 90px; display: flex; flex-direction: column; align-items: center;
+  position: relative; text-align: center; padding: 0 4px;
 }
-.funnel-step.done:not(:last-child)::before { background: var(--green); }
-.funnel-dot {
-  width: 28px; height: 28px; flex: none; border-radius: 999px; z-index: 1;
+.stage-step:not(:last-child)::after {
+  content: ""; position: absolute; top: 13px; height: 2px;
+  left: calc(50% + 18px); right: calc(-50% + 18px);
+  background: var(--border);
+}
+.stage-step.done:not(:last-child)::after { background: var(--green); }
+.stage-dot {
+  width: 28px; height: 28px; border-radius: 999px; z-index: 1;
   background: var(--panel-2); border: 2px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; color: var(--green);
 }
-.funnel-step.done .funnel-dot { border-color: var(--green); background: rgba(62, 207, 142, 0.12); }
-.funnel-label { font-size: 14px; color: var(--muted); }
-.funnel-step.done .funnel-label { color: var(--text); font-weight: 500; }
-.funnel-date { font-size: 12px; color: var(--muted); }
-.funnel-here {
-  margin-left: auto; font-size: 11px; font-weight: 600;
-  padding: 2px 9px; border-radius: 999px;
+.stage-step.done .stage-dot { border-color: var(--green); background: rgba(62, 207, 142, 0.12); }
+.stage-label { margin-top: 7px; font-size: 12px; color: var(--muted); }
+.stage-step.done .stage-label { color: var(--text); font-weight: 500; }
+.stage-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.stage-here {
+  margin-top: 5px; font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
   background: rgba(90, 141, 255, 0.15); color: var(--accent);
 }
-.funnel-here.stopped { background: rgba(255, 90, 90, 0.15); color: var(--red); }
+.stage-here.stopped { background: rgba(255, 90, 90, 0.15); color: var(--red); }
 
 .link-btn {
   background: none; border: none; padding: 0; font-size: 12px; cursor: pointer;
