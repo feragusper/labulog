@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
-import { Badge, CardsSkeleton, TableSkeleton } from "../components/ui";
+import { Age, Badge, CardsSkeleton, TableSkeleton } from "../components/ui";
 import { flag } from "../countries";
 import { useI18n } from "../i18n";
 
@@ -61,6 +61,7 @@ export default function Overview() {
                     )}
                   </td>
                   <td><Badge status={a.status} /></td>
+                  <td className="muted" style={{ fontSize: 13, textAlign: "right" }}><Age app={a} /></td>
                   <td className="muted" style={{ fontSize: 13, textAlign: "right" }}>{fmt(lastActivity(a))}</td>
                 </tr>
               ))}

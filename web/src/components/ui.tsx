@@ -116,6 +116,46 @@ export function localDateInput(d: Date): string {
 // No real interview durations are tracked; estimate total time from round count.
 export const HOURS_PER_INTERVIEW = 1;
 
+// Whole days between a past timestamp and now (floored, never negative). null if absent/invalid.
+export function daysSince(ts: number | string | null | undefined): number | null {
+  if (!ts) return null;
+  const then = +new Date(ts);
+  if (isNaN(then)) return null;
+  return Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
+}
+
+// When the application last changed state: newest status event, else created_at.
+export function lastChangeTs(a: Application): number {
+  const ts = a.events.map((e) => +new Date(e.at));
+  return ts.length ? Math.max(...ts) : +new Date(a.created_at);
+}
+
+// When the process started: applied_at, else earliest status event, else created_at.
+export function processStartTs(a: Application): number {
+  if (a.applied_at) return +new Date(a.applied_at);
+  const ts = a.events.map((e) => +new Date(e.at));
+  return ts.length ? Math.min(...ts) : +new Date(a.created_at);
+}
+
+export function daysSinceLastChange(a: Application): number {
+  return daysSince(lastChangeTs(a)) ?? 0;
+}
+export function totalDays(a: Application): number {
+  return daysSince(processStartTs(a)) ?? 0;
+}
+
+// Compact "days since last state change / total days in process", e.g. "3d / 21d".
+export function Age({ app }: { app: Application }) {
+  const { t } = useI18n();
+  const since = daysSinceLastChange(app);
+  const total = totalDays(app);
+  return (
+    <span className="age" title={t("age.tooltip")}>
+      {since}d <span className="muted">/ {total}d</span>
+    </span>
+  );
+}
+
 export function Skeleton({ w = "100%", h = 14, style }: { w?: number | string; h?: number | string; style?: React.CSSProperties }) {
   return <div className="skeleton" style={{ width: w, height: h, ...style }} />;
 }

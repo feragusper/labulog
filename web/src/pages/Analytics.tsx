@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, type AppStatus, type Application } from "../api";
 import { FunnelChart, PieChart } from "../components/Charts";
 import {
-  Badge, CardsSkeleton, furthestStage, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, NEGATIVE_TERMINAL,
-  PanelSkeleton, pct, PIPELINE, rankOf, TERMINAL,
+  Badge, CardsSkeleton, daysSinceLastChange, furthestStage, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES,
+  NEGATIVE_TERMINAL, PanelSkeleton, pct, PIPELINE, rankOf, TERMINAL,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 
@@ -40,6 +40,11 @@ export default function Analytics() {
   const durations = list.filter(progressed).map(processDays).filter((d): d is number => d !== null);
   const avgProcess = durations.length
     ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length) : null;
+
+  // Staleness: average days since last state change across in-flight apps (excludes saved + terminals).
+  const active = list.filter((a) => !CLOSED.includes(a.status) && a.status !== "saved");
+  const avgStale = active.length
+    ? Math.round(active.reduce((s, a) => s + daysSinceLastChange(a), 0) / active.length) : null;
 
   const now = new Date();
   const due = list
@@ -98,6 +103,7 @@ export default function Analytics() {
           <Card label={t("overview.interviewRounds")} value={interviewRounds} />
           <Card label={t("overview.interviewHours")} value={`~${interviewHours} h`} />
           <Card label={t("overview.avgProcess")} value={avgProcess !== null ? `${avgProcess} d` : "—"} />
+          <Card label={t("overview.avgStale")} value={avgStale !== null ? `${avgStale} d` : "—"} />
           <Card label={t("overview.dueFollowups")} value={due.length} />
         </div>
       )}

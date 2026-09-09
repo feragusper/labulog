@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type PendingRow, type Priority } from "../api";
 import {
-  Badge, commitmentLabel, COMMITMENTS, furthestStage, localDateInput, PriorityBadge, PRIORITIES,
-  rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS, STATUSES,
+  Age, Badge, commitmentLabel, COMMITMENTS, daysSinceLastChange, furthestStage, localDateInput,
+  PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS, STATUSES,
   statusColorClass, statusLabel, TableSkeleton,
 } from "../components/ui";
 import CountrySelect from "../components/CountrySelect";
@@ -17,7 +17,7 @@ import { useI18n } from "../i18n";
 const CLOSED: AppStatus[] = ["rejected", "cancelled", "ghosted", "withdrawn"];
 const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
-type SortKey = "company" | "status" | "priority" | "salary" | "applied" | "activity" | "followup";
+type SortKey = "company" | "status" | "priority" | "salary" | "applied" | "activity" | "age" | "followup";
 type SortDir = "asc" | "desc";
 
 function lastActivity(a: Application): number {
@@ -120,6 +120,7 @@ export default function Applications() {
         case "salary": return a.posting.salary_min ?? -1;
         case "applied": return a.applied_at ? +new Date(a.applied_at) : 0;
         case "activity": return lastActivity(a);
+        case "age": return daysSinceLastChange(a);
         case "followup": return a.follow_up_date ? +new Date(a.follow_up_date) : Infinity;
       }
     };
@@ -226,6 +227,7 @@ export default function Applications() {
                 <th className="sortable" onClick={() => toggleSort("status")}>{t("apps.colStatus")}{arrow("status")}</th>
                 <th className="sortable" onClick={() => toggleSort("priority")}>{t("apps.colPriority")}{arrow("priority")}</th>
                 <th className="sortable" onClick={() => toggleSort("salary")}>{t("apps.colSalary")}{arrow("salary")}</th>
+                <th className="sortable" onClick={() => toggleSort("age")}>{t("apps.colAge")}{arrow("age")}</th>
                 <th className="sortable" onClick={() => toggleSort("applied")}>{t("apps.colApplied")}{arrow("applied")}</th>
                 <th className="sortable" onClick={() => toggleSort("followup")}>{t("apps.colFollowup")}{arrow("followup")}</th>
               </tr>
@@ -349,6 +351,7 @@ function AppRow({ app, selected, onToggleSelect, onStatus }: {
       </td>
       <td>{app.priority ? <PriorityBadge priority={app.priority} /> : <span className="muted">—</span>}</td>
       <td className="muted">{salaryDisplay(p)}</td>
+      <td className="muted"><Age app={app} /></td>
       <td className="muted">{fmt(app.applied_at)}</td>
       <td className={isDue(app) ? "due" : "muted"}>{app.follow_up_date ? fmt(app.follow_up_date) : "—"}</td>
     </tr>
