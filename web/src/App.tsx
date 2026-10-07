@@ -11,6 +11,8 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import CvBuilder from "./pages/CvBuilder";
+import News from "./pages/News";
+import Jobs from "./pages/Jobs";
 
 export default function App() {
   const meQuery = useQuery({
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="profile" element={<Profile />} />
         <Route path="profile/cv" element={<CvBuilder />} />
+        <Route path="news" element={<News />} />
+        <Route path="jobs" element={<Jobs />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

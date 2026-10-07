@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 10080  # 7 days
     cors_origins: str = "http://localhost:5173"
     google_client_id: str = ""  # OAuth client id; empty disables Google login
+    # Optional free Adzuna key (developer.adzuna.com) → adds on-site jobs by country.
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
 
     @property
     def cors_origin_list(self) -> List[str]:

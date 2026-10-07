@@ -105,3 +105,24 @@ export function UserIcon(props: IconProps) {
     </Base>
   );
 }
+
+export function NewsIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h11A1.5 1.5 0 0 1 18 5.5V19a1 1 0 0 0 2 0V8.5" />
+      <path d="M18 19a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5.5" />
+      <path d="M7.5 8h7" />
+      <path d="M7.5 12h7" />
+      <path d="M7.5 16h4" />
+    </Base>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </Base>
+  );
+}

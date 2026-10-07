@@ -215,6 +215,20 @@ export interface ProfileImportResult {
   counts: Record<string, number>;
 }
 
+// ---- discovery feeds ----
+export interface FeedSuggest { role: string; terms: string[]; location: string; skills: string[] }
+export type NewsScope = "role" | "related" | "market";
+export interface NewsItem { title: string; url: string; source: string; published_at: string | null; scope: NewsScope }
+export interface NewsResult { query: string; items: NewsItem[] }
+export interface JobItem {
+  source: string; source_url: string; title: string; company: string; location: string; remote: boolean;
+  url: string; salary_min: number | null; salary_max: number | null; currency: string | null;
+  salary_period: string | null; published_at: string | null; tags: string[]; excerpt: string;
+  application_id: number | null;
+}
+export interface JobSource { name: string; url: string; ok: boolean; count: number; error: string | null }
+export interface JobsResult { query: string; location: string; sources: JobSource[]; items: JobItem[] }
+
 export interface Funnel {
   total: number;
   by_status: Record<AppStatus, number>;
@@ -361,6 +375,18 @@ export const api = {
     request<void>(`/api/sim/templates/${id}`, { method: "DELETE" }),
 
   funnel: () => request<Funnel>("/api/stats/funnel"),
+
+  feedSuggest: () => request<FeedSuggest>("/api/feed/suggest"),
+
+  news: (q: string, lang: string) =>
+    request<NewsResult>(`/api/feed/news?lang=${lang}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
+
+  jobs: (q: string, location: string | null) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (location !== null) params.set("location", location);
+    return request<JobsResult>(`/api/feed/jobs?${params}`);
+  },
 
   getProfile: () => request<Profile>("/api/profile"),
 

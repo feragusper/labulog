@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type ProfileData, type ProfileImportResult } from "../api";
 import { useI18n } from "../i18n";
 import { PanelSkeleton } from "../components/ui";
+import ProfileView from "../components/ProfileView";
 
 type FieldType = "text" | "textarea" | "lines" | "checkbox";
 interface FieldDef { key: string; label: string; type?: FieldType; wide?: boolean; ph?: string }
@@ -101,6 +102,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [skillInput, setSkillInput] = useState("");
+  const [editing, setEditing] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [importMode, setImportMode] = useState<"merge" | "replace">("merge");
@@ -114,6 +116,24 @@ export default function Profile() {
       setDraft(data);
     }
   }, [q.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A brand-new (empty) profile opens straight in edit mode.
+  useEffect(() => {
+    if (q.data && !q.data.basics.full_name && q.data.experience.length === 0) setEditing(true);
+  }, [q.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cancelEdit = () => {
+    if (dirty && !confirm(t("profile.discardConfirm"))) return;
+    if (q.data) {
+      const { updated_at: _u, ...data } = q.data;
+      setDraft(data);
+    }
+    setDirty(false);
+    setSaveMsg(null);
+    setImportRes(null);
+    setImportErr(null);
+    setEditing(false);
+  };
 
   const update = (patch: Partial<ProfileData>) => { setDraft((d) => ({ ...d, ...patch })); setDirty(true); setSaveMsg(null); };
   const setBasic = (k: keyof ProfileData["basics"], v: string) => update({ basics: { ...draft.basics, [k]: v } });
@@ -129,10 +149,12 @@ export default function Profile() {
       };
       const saved = await api.saveProfile(clean);
       qc.setQueryData(["profile"], saved);
+      qc.invalidateQueries({ queryKey: ["feed-suggest"] });
       const { updated_at: _u, ...data } = saved;
       setDraft(data);
       setDirty(false);
       setSaveMsg(t("profile.saved"));
+      setEditing(false);
     } catch (e) {
       setSaveMsg(e instanceof ApiError ? e.message : t("profile.saveFailed"));
     } finally {
@@ -151,6 +173,7 @@ export default function Profile() {
       const res = await api.importLinkedIn(file, importMode);
       setImportRes(res);
       qc.setQueryData(["profile"], res.profile);
+      qc.invalidateQueries({ queryKey: ["feed-suggest"] });
       const { updated_at: _u, ...data } = res.profile;
       setDraft(data);
       setDirty(false);
@@ -198,11 +221,22 @@ export default function Profile() {
       <div className="page-head">
         <h1 className="page-title" style={{ margin: 0 }}>{t("profile.title")}</h1>
         <div className="page-head-actions">
-          <Link to="/profile/cv" className="btn-link ghost">{t("profile.generateCv")}</Link>
-          <button onClick={save} disabled={!dirty || saving}>{saving ? t("profile.saving") : t("common.save")}</button>
+          {editing ? (
+            <>
+              <button className="ghost" onClick={cancelEdit}>{t("common.cancel")}</button>
+              <button onClick={save} disabled={!dirty || saving}>{saving ? t("profile.saving") : t("common.save")}</button>
+            </>
+          ) : (
+            <>
+              <Link to="/profile/cv" className="btn-link ghost">{t("profile.generateCv")}</Link>
+              <button onClick={() => { setSaveMsg(null); setEditing(true); }}>{t("profile.edit")}</button>
+            </>
+          )}
         </div>
       </div>
       {saveMsg && <p className="muted" style={{ marginTop: -8 }}>{saveMsg}</p>}
+
+      {!editing ? <ProfileView p={draft} /> : (<>
 
       <div className="panel">
         <h2>{t("profile.linkedin")}</h2>
@@ -356,7 +390,9 @@ export default function Profile() {
         />
       </div>
 
-      {dirty && (
+      </>)}
+
+      {editing && dirty && (
         <div className="save-bar">
           <span>{t("profile.unsaved")}</span>
           <button onClick={save} disabled={saving}>{saving ? t("profile.saving") : t("common.save")}</button>

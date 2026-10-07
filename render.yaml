@@ -20,3 +20,8 @@ services:
         value: ""   # same-origin in prod; SPA served by the API itself
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "10080"
+      - key: ADZUNA_APP_ID
+        # Optional, free at developer.adzuna.com — enables on-site job search by country.
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
