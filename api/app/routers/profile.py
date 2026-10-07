@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlmodel import Session, select
 
 from ..db import get_session
+from ..linkedin_pdf import parse_linkedin_pdf
 from ..deps import get_current_user
 from ..models import Profile, User, utcnow
 from ..schemas import ProfileData, ProfileImportResult, ProfileRead
@@ -55,7 +56,7 @@ def put_profile(
 # LinkedIn's public API only exposes name/email/photo (OpenID Connect); full
 # profile access is partner-only. Instead we ingest the member's own data export
 # (Settings → Data privacy → Get a copy of your data), a ZIP of CSVs. Individual
-# CSVs from that ZIP are accepted too.
+# CSVs from that ZIP are accepted too, and so is the profile's "Save to PDF".
 
 _MONTHS = {m: i + 1 for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
@@ -244,13 +245,23 @@ async def import_linkedin(
     raw = await file.read()
     if len(raw) > MAX_UPLOAD:
         raise HTTPException(status_code=413, detail="File too large")
-    found = _collect(file.filename or "upload.csv", raw)
-    if not found:
-        raise HTTPException(
-            status_code=400,
-            detail="No LinkedIn data found. Upload the export ZIP or files like Positions.csv, Skills.csv, Profile.csv.",
-        )
-    incoming = _parse_linkedin(found)
+    filename = file.filename or "upload.csv"
+    if filename.lower().endswith(".pdf") or raw[:5] == b"%PDF-":
+        # Profile → More → Save to PDF. Quicker to get than the data export, but
+        # LinkedIn only prints the top 3 skills and no projects in it.
+        try:
+            incoming = parse_linkedin_pdf(raw)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Could not read this PDF. Use the one from LinkedIn's \"Save to PDF\".")
+        found = {"pdf": []}
+    else:
+        found = _collect(filename, raw)
+        if not found:
+            raise HTTPException(
+                status_code=400,
+                detail="No LinkedIn data found. Upload the profile PDF, the export ZIP or files like Positions.csv.",
+            )
+        incoming = _parse_linkedin(found)
 
     prof = _get_or_create(session, current)
     if mode == "replace":

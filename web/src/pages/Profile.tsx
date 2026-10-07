@@ -217,7 +217,7 @@ export default function Profile() {
             <button className={importMode === "merge" ? "active" : ""} onClick={() => setImportMode("merge")}>{t("profile.modeMerge")}</button>
             <button className={importMode === "replace" ? "active" : ""} onClick={() => setImportMode("replace")}>{t("profile.modeReplace")}</button>
           </div>
-          <input ref={fileRef} type="file" accept=".zip,.csv,application/zip,text/csv" style={{ display: "none" }} onChange={onImport} />
+          <input ref={fileRef} type="file" accept=".pdf,.zip,.csv,application/pdf,application/zip,text/csv" style={{ display: "none" }} onChange={onImport} />
           <button disabled={importing} onClick={() => fileRef.current?.click()}>
             {importing ? t("profile.importing") : t("profile.importBtn")}
           </button>
