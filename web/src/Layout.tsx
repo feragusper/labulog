@@ -4,7 +4,7 @@ import { auth } from "./api";
 import { useI18n } from "./i18n";
 import {
   BriefcaseIcon, ChartIcon, ChevronLeftIcon, ChevronRightIcon,
-  HomeIcon, LogOutIcon, SettingsIcon,
+  HomeIcon, LogOutIcon, SettingsIcon, UserIcon,
 } from "./components/icons";
 
 const COLLAPSE_KEY = "labulog_sidebar_collapsed";
@@ -13,6 +13,7 @@ const NAV: { to: string; key: string; end?: boolean; Icon: ComponentType<{ size?
   { to: "/", key: "nav.overview", end: true, Icon: HomeIcon },
   { to: "/applications", key: "nav.applications", Icon: BriefcaseIcon },
   { to: "/analytics", key: "nav.analytics", Icon: ChartIcon },
+  { to: "/profile", key: "nav.profile", Icon: UserIcon },
   { to: "/settings", key: "nav.settings", Icon: SettingsIcon },
 ];
 

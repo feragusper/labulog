@@ -299,3 +299,82 @@ class SimRunRead(BaseModel):
 
 # Resolve forward reference (ContactCreate defined after ApplicationCreate).
 ApplicationCreate.model_rebuild()
+
+
+# ---- profile / CV ----
+class ProfileBasics(BaseModel):
+    full_name: str = ""
+    headline: str = ""
+    email: str = ""
+    phone: str = ""
+    location: str = ""
+    website: str = ""
+    linkedin: str = ""
+    github: str = ""
+    summary: str = ""
+
+
+class ProfileExperience(BaseModel):
+    company: str = ""
+    title: str = ""
+    location: str = ""
+    start: str = ""  # "YYYY-MM" or "YYYY" (free text tolerated)
+    end: str = ""    # empty + current=True → "present"
+    current: bool = False
+    description: str = ""
+    highlights: List[str] = []
+
+
+class ProfileEducation(BaseModel):
+    school: str = ""
+    degree: str = ""
+    field: str = ""
+    start: str = ""
+    end: str = ""
+    description: str = ""
+
+
+class ProfileSkill(BaseModel):
+    name: str
+    level: str = ""     # free text: beginner/intermediate/advanced/expert, "5y", …
+    category: str = ""  # e.g. Languages, Frameworks, Tools
+
+
+class ProfileLanguage(BaseModel):
+    name: str
+    proficiency: str = ""
+
+
+class ProfileCertification(BaseModel):
+    name: str
+    issuer: str = ""
+    date: str = ""
+    url: str = ""
+
+
+class ProfileProject(BaseModel):
+    name: str
+    description: str = ""
+    url: str = ""
+    start: str = ""
+    end: str = ""
+
+
+class ProfileData(BaseModel):
+    basics: ProfileBasics = ProfileBasics()
+    experience: List[ProfileExperience] = []
+    education: List[ProfileEducation] = []
+    skills: List[ProfileSkill] = []
+    languages: List[ProfileLanguage] = []
+    certifications: List[ProfileCertification] = []
+    projects: List[ProfileProject] = []
+
+
+class ProfileRead(ProfileData):
+    updated_at: Optional[datetime] = None
+
+
+class ProfileImportResult(BaseModel):
+    profile: ProfileRead
+    found: List[str]  # which LinkedIn files were recognised
+    counts: dict      # section -> items added

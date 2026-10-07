@@ -163,3 +163,14 @@ class SimRun(SQLModel, table=True):
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class Profile(SQLModel, table=True):
+    """Private per user (one row each). The whole CV-ish profile lives in `data` as
+    a single JSON document — basics, experience, education, skills, languages,
+    certifications, projects (see ProfileData in schemas.py). It is always edited
+    and rendered as a whole, so no need to normalise it into tables."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True, unique=True)
+    data: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=utcnow)

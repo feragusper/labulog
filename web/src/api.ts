@@ -171,6 +171,50 @@ export interface SimMeta {
   regions: { key: string; label: string }[];
 }
 
+// ---- profile / CV ----
+export interface ProfileBasics {
+  full_name: string;
+  headline: string;
+  email: string;
+  phone: string;
+  location: string;
+  website: string;
+  linkedin: string;
+  github: string;
+  summary: string;
+}
+export interface ProfileExperience {
+  company: string; title: string; location: string;
+  start: string; end: string; current: boolean;
+  description: string; highlights: string[];
+}
+export interface ProfileEducation {
+  school: string; degree: string; field: string;
+  start: string; end: string; description: string;
+}
+export interface ProfileSkill { name: string; level: string; category: string }
+export interface ProfileLanguage { name: string; proficiency: string }
+export interface ProfileCertification { name: string; issuer: string; date: string; url: string }
+export interface ProfileProject { name: string; description: string; url: string; start: string; end: string }
+
+export interface ProfileData {
+  basics: ProfileBasics;
+  experience: ProfileExperience[];
+  education: ProfileEducation[];
+  skills: ProfileSkill[];
+  languages: ProfileLanguage[];
+  certifications: ProfileCertification[];
+  projects: ProfileProject[];
+}
+export interface Profile extends ProfileData {
+  updated_at: string | null;
+}
+export interface ProfileImportResult {
+  profile: Profile;
+  found: string[];
+  counts: Record<string, number>;
+}
+
 export interface Funnel {
   total: number;
   by_status: Record<AppStatus, number>;
@@ -317,6 +361,23 @@ export const api = {
     request<void>(`/api/sim/templates/${id}`, { method: "DELETE" }),
 
   funnel: () => request<Funnel>("/api/stats/funnel"),
+
+  getProfile: () => request<Profile>("/api/profile"),
+
+  saveProfile: (data: ProfileData) =>
+    request<Profile>("/api/profile", { method: "PUT", body: JSON.stringify(data) }),
+
+  importLinkedIn: async (file: File, mode: "merge" | "replace"): Promise<ProfileImportResult> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/profile/import/linkedin?mode=${mode}`, {
+      method: "POST",
+      headers: auth.token ? { Authorization: `Bearer ${auth.token}` } : {},
+      body: form,
+    });
+    if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => ({}))).detail ?? "Import failed");
+    return res.json();
+  },
 
   exportCsv: async (): Promise<void> => {
     const res = await fetch("/api/applications/export.csv", {

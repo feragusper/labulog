@@ -9,6 +9,8 @@ import ApplicationDetail from "./pages/ApplicationDetail";
 import SimRunner from "./pages/SimRunner";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
+import CvBuilder from "./pages/CvBuilder";
 
 export default function App() {
   const meQuery = useQuery({
@@ -33,6 +35,8 @@ export default function App() {
         <Route path="applications/:id" element={<ApplicationDetail />} />
         <Route path="sim/:runId" element={<SimRunner />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="profile/cv" element={<CvBuilder />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
