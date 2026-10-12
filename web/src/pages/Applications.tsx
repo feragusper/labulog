@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, type AppStatus, type Application, type PendingRow, type Priority } from "../api";
 import {
-  Age, Badge, commitmentLabel, COMMITMENTS, daysSinceLastChange, furthestStage, localDateInput,
+  Age, Badge, commitmentLabel, COMMITMENTS, daysSinceLastChange, furthestStage, ghostEvent, ghostSuggestion,
+  localDateInput,
   PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS, STATUSES,
   statusColorClass, statusLabel, TableSkeleton,
 } from "../components/ui";
@@ -83,6 +84,10 @@ export default function Applications() {
   const setStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: AppStatus }) =>
       api.updateApplication(id, { status }),
+    onSuccess: invalidate,
+  });
+  const markGhosted = useMutation({
+    mutationFn: ({ id, days }: { id: number; days: number }) => api.addEvent(id, ghostEvent(t, days)),
     onSuccess: invalidate,
   });
 
@@ -240,6 +245,7 @@ export default function Applications() {
                   selected={selected.has(a.id)}
                   onToggleSelect={() => toggleSelect(a.id)}
                   onStatus={(s) => setStatus.mutate({ id: a.id, status: s })}
+                  onGhost={(days) => markGhosted.mutate({ id: a.id, days })}
                 />
               ))}
             </tbody>
@@ -324,14 +330,16 @@ function PendingRowView({ row, onResolved }: { row: PendingRow; onResolved: () =
   );
 }
 
-function AppRow({ app, selected, onToggleSelect, onStatus }: {
+function AppRow({ app, selected, onToggleSelect, onStatus, onGhost }: {
   app: Application;
   selected: boolean;
   onToggleSelect: () => void;
   onStatus: (s: AppStatus) => void;
+  onGhost: (days: number) => void;
 }) {
   const { t } = useI18n();
   const p = app.posting;
+  const ghostDays = ghostSuggestion(app);
   return (
     <tr className={`statusrow ${statusColorClass(app.status)}${selected ? " selected" : ""}`}>
       <td className="check-cell">
@@ -348,6 +356,15 @@ function AppRow({ app, selected, onToggleSelect, onStatus }: {
         <select value={app.status} onChange={(e) => onStatus(e.target.value as AppStatus)} style={{ width: "auto" }}>
           {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(t, s)}</option>)}
         </select>
+        {ghostDays !== null && (
+          <button
+            className="ghost-suggest"
+            title={`${t("ghost.tooltip").replace("{days}", String(ghostDays))} — ${t("ghost.accept")}`}
+            onClick={() => onGhost(ghostDays)}
+          >
+            👻 {t("ghost.suggest")}
+          </button>
+        )}
       </td>
       <td>{app.priority ? <PriorityBadge priority={app.priority} /> : <span className="muted">—</span>}</td>
       <td className="muted">{salaryDisplay(p)}</td>

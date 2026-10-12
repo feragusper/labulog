@@ -106,6 +106,11 @@ const ES: Dict = {
   "apps.colAge": "Días",
   "apps.colFollowup": "Follow-up",
   "age.tooltip": "Días desde el último cambio de estado / días totales en el proceso",
+  "ghost.suggest": "¿Ghosteada?",
+  "ghost.tooltip": "Sin novedades hace {days} días — probablemente te ghostearon",
+  "ghost.banner": "Sin novedades hace {days} días. ¿La marcamos como ghosteada?",
+  "ghost.accept": "Marcar ghosteada",
+  "ghost.note": "Sin respuesta tras {days} días",
 
   "form.new": "Nueva postulación",
   "form.url": "URL del posting",
@@ -539,6 +544,11 @@ const EN: Dict = {
   "apps.colAge": "Days",
   "apps.colFollowup": "Follow-up",
   "age.tooltip": "Days since last status change / total days in the process",
+  "ghost.suggest": "Ghosted?",
+  "ghost.tooltip": "No news for {days} days — you were probably ghosted",
+  "ghost.banner": "No news for {days} days. Mark it as ghosted?",
+  "ghost.accept": "Mark ghosted",
+  "ghost.note": "No response after {days} days",
 
   "form.new": "New application",
   "form.url": "Posting URL",

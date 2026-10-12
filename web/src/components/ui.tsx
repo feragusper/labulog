@@ -144,6 +144,31 @@ export function totalDays(a: Application): number {
   return daysSince(processStartTs(a)) ?? 0;
 }
 
+// Days of silence after which an open application is probably ghosted. Early stages
+// get more slack (recruiters are slow to screen); late stages go quiet faster.
+export function ghostThreshold(s: AppStatus): number {
+  if (s === "applied" || s === "first_contact") return 30;
+  if (s === "offer" || s === "proposal") return 14;
+  return 21;
+}
+
+// Days since last change if the app looks ghosted (open, past "saved", silent past threshold), else null.
+export function ghostSuggestion(a: Application): number | null {
+  if (a.status === "saved" || TERMINAL.includes(a.status)) return null;
+  const since = daysSinceLastChange(a);
+  return since >= ghostThreshold(a.status) ? since : null;
+}
+
+// Event payload that marks an application as ghosted now.
+export function ghostEvent(t: (k: string) => string, days: number) {
+  return {
+    status: "ghosted" as AppStatus,
+    at: new Date().toISOString(),
+    note: t("ghost.note").replace("{days}", String(days)),
+    set_current: true,
+  };
+}
+
 // Compact "days since last state change / total days in process", e.g. "3d / 21d".
 export function Age({ app }: { app: Application }) {
   const { t } = useI18n();

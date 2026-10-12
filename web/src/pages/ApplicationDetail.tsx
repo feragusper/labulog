@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Application, type AppStatus, type Priority } from "../api";
 import {
-  Badge, commitmentLabel, COMMITMENTS, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, localDateInput, NEGATIVE_TERMINAL,
+  Badge, commitmentLabel, COMMITMENTS, ghostEvent, ghostSuggestion, HOURS_PER_INTERVIEW, INTERVIEW_STATUSES, localDateInput, NEGATIVE_TERMINAL,
   PanelSkeleton, PIPELINE, PriorityBadge, PRIORITIES, rankOf, salaryDisplay, salaryPeriodLabel, SALARY_PERIODS,
   Skeleton, STATUSES, statusLabel, TERMINAL,
 } from "../components/ui";
@@ -56,6 +56,10 @@ export default function ApplicationDetail() {
       api.addEvent(appId, { status, at: new Date().toISOString(), set_current: true }),
     onSuccess: invalidate,
   });
+  const markGhosted = useMutation({
+    mutationFn: (days: number) => api.addEvent(appId, ghostEvent(t, days)),
+    onSuccess: invalidate,
+  });
 
   const [editing, setEditing] = useState(false);
 
@@ -75,6 +79,7 @@ export default function ApplicationDetail() {
   const reachedIdx = Math.max(-1, ...[...reachedSet].map(rankOf));
   const terminal = TERMINAL.includes(app.status) ? app.status : null;
   const p = app.posting;
+  const ghostDays = ghostSuggestion(app);
 
   const eventTimes = app.events.map((e) => +new Date(e.at));
   const startTs = app.applied_at ? +new Date(app.applied_at) : (eventTimes.length ? Math.min(...eventTimes) : null);
@@ -126,6 +131,15 @@ export default function ApplicationDetail() {
         <StageFunnel app={app} reachedIdx={reachedIdx} terminal={terminal} />
         {terminal && (
           <div style={{ marginTop: 12 }}>{t("detail.finalResult")} <Badge status={terminal} /></div>
+        )}
+        {ghostDays !== null && (
+          <div className="row ghost-banner" style={{ marginTop: 12, alignItems: "center" }}>
+            <span style={{ fontSize: 13 }}>👻 {t("ghost.banner").replace("{days}", String(ghostDays))}</span>
+            <div style={{ flex: 1 }} />
+            <button className="shrink" disabled={markGhosted.isPending} onClick={() => markGhosted.mutate(ghostDays)}>
+              {t("ghost.accept")}
+            </button>
+          </div>
         )}
         {!terminal && app.status === "offer" && (
           <div className="row" style={{ marginTop: 12, alignItems: "center" }}>
