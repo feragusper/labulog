@@ -220,6 +220,7 @@ export interface FeedSuggest { role: string; terms: string[]; location: string; 
 export type NewsScope = "role" | "related" | "market";
 export interface NewsItem { title: string; url: string; source: string; published_at: string | null; scope: NewsScope }
 export interface NewsResult { query: string; items: NewsItem[] }
+export interface NewsMeta { url: string; image: string | null; description: string | null }
 export interface JobItem {
   source: string; source_url: string; title: string; company: string; location: string; remote: boolean;
   url: string; salary_min: number | null; salary_max: number | null; currency: string | null;
@@ -380,6 +381,8 @@ export const api = {
 
   news: (q: string, lang: string) =>
     request<NewsResult>(`/api/feed/news?lang=${lang}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
+
+  newsMeta: (u: string) => request<NewsMeta>(`/api/feed/news/meta?u=${encodeURIComponent(u)}`),
 
   jobs: (q: string, location: string | null) => {
     const params = new URLSearchParams();

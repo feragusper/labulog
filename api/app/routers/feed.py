@@ -11,7 +11,9 @@ which the UI shows), plus Adzuna when ADZUNA_APP_ID/ADZUNA_APP_KEY are set
 its API terms forbid re-publishing its jobs on other sites.
 """
 import html
+import json
 import re
+import threading
 import time
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +22,8 @@ from email.utils import parsedate_to_datetime
 from typing import Callable, Dict, List, Optional, Tuple
 
 import requests
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from urllib.parse import quote, urlparse
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -37,13 +40,13 @@ CACHE_TTL = 15 * 60
 _cache: Dict[Tuple, Tuple[float, object]] = {}
 
 
-def _cached(key: Tuple, fn: Callable[[], object]):
+def _cached(key: Tuple, fn: Callable[[], object], ttl: int = CACHE_TTL):
     hit = _cache.get(key)
-    if hit and time.time() - hit[0] < CACHE_TTL:
+    if hit and time.time() - hit[0] < ttl:
         return hit[1]
     val = fn()
     _cache[key] = (time.time(), val)
-    if len(_cache) > 500:  # crude bound; entries are tiny
+    if len(_cache) > 2000:  # crude bound; entries are tiny
         for k in sorted(_cache, key=lambda k: _cache[k][0])[:100]:
             _cache.pop(k, None)
     return val
@@ -276,6 +279,94 @@ def news(
     lang = "es" if lang == "es" else "en"
     role = (q or "").strip() or _suggest(session, current).role
     return NewsResult(query=role, items=_news(role, lang))
+
+
+# ---- news card metadata (image, snippet, real URL) ----
+# Google News links are redirects (news.google.com/rss/articles/<id>). To show a
+# thumbnail we decode the id to the publisher URL (same two-step dance Google's
+# own page does: fetch signature, then batchexecute) and read the article's
+# og:image / og:description. ~3-5 s per article, so the UI requests it lazily
+# per card and we cache it for a day; a semaphore keeps us polite on a small box.
+BROWSER_UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+              "Accept-Language": "en-US,en;q=0.8,es;q=0.6"}
+META_TTL = 24 * 3600
+_meta_slots = threading.Semaphore(6)
+_GNEWS_PREFIX = "https://news.google.com/rss/articles/"
+
+
+class NewsMeta(BaseModel):
+    url: str                    # publisher URL (falls back to the Google link)
+    image: Optional[str] = None
+    description: Optional[str] = None
+
+
+def _decode_gnews(link: str) -> Optional[str]:
+    gid = link[len(_GNEWS_PREFIX):].split("?")[0]
+    page = requests.get(f"{_GNEWS_PREFIX}{gid}", headers=BROWSER_UA, timeout=TIMEOUT).text
+    sg = re.search(r'data-n-a-sg="([^"]+)"', page)
+    ts = re.search(r'data-n-a-ts="([^"]+)"', page)
+    if not (sg and ts):
+        return None
+    inner = (f'["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],'
+             f'"X","X",1,[1,1,1],1,1,null,0,0,null,0],"{gid}",{ts.group(1)},"{sg.group(1)}"]')
+    r = requests.post(
+        "https://news.google.com/_/DotsSplashUi/data/batchexecute",
+        headers={**BROWSER_UA, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
+        data="f.req=" + quote(json.dumps([[["Fbv4je", inner]]])), timeout=TIMEOUT,
+    )
+    r.raise_for_status()
+    url = json.loads(json.loads(r.text.split("\n\n")[1])[0][2])[1]
+    return url if isinstance(url, str) and url.startswith(("http://", "https://")) else None
+
+
+def _meta_tag(page: str, *names: str) -> Optional[str]:
+    for n in names:
+        for pat in (rf'<meta[^>]+(?:property|name)=["\']{n}["\'][^>]*content=["\']([^"\']+)',
+                    rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]*(?:property|name)=["\']{n}["\']'):
+            m = re.search(pat, page, re.I)
+            if m:
+                return html.unescape(m.group(1)).strip()
+    return None
+
+
+def _article_meta(link: str) -> NewsMeta:
+    with _meta_slots:
+        url = _decode_gnews(link) or link
+        if url == link:
+            return NewsMeta(url=link)
+        image = desc = None
+        try:
+            with requests.get(url, headers=BROWSER_UA, timeout=TIMEOUT, stream=True) as r:
+                raw = b""
+                for chunk in r.iter_content(32768):
+                    raw += chunk
+                    if b"</head>" in raw.lower() or len(raw) > 400_000:  # og tags live in <head>
+                        break
+            page = raw.decode(r.encoding or "utf-8", errors="replace")
+            image = _meta_tag(page, "og:image", "og:image:url", "twitter:image", "twitter:image:src")
+            desc = _meta_tag(page, "og:description", "description", "twitter:description")
+            if image and image.startswith("//"):
+                image = "https:" + image
+            elif image and image.startswith("/"):
+                p = urlparse(url)
+                image = f"{p.scheme}://{p.netloc}{image}"
+            if image and not image.startswith(("http://", "https://")):
+                image = None
+        except requests.RequestException:
+            pass
+        return NewsMeta(url=url, image=image, description=desc[:300] if desc else None)
+
+
+@router.get("/news/meta", response_model=NewsMeta)
+def news_meta(u: str, current: User = Depends(get_current_user)):
+    # Only Google News article links: this is not a general-purpose URL fetcher.
+    if not u.startswith(_GNEWS_PREFIX):
+        raise HTTPException(status_code=400, detail="Unsupported URL")
+    try:
+        return _cached(("news-meta", u), lambda: _article_meta(u), ttl=META_TTL)
+    except Exception:
+        return NewsMeta(url=u)
 
 
 # ---- jobs ----
