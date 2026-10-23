@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { countryName, flag, searchCountries } from "../countries";
 
 export default function CountrySelect({
-  value, onChange, placeholder,
+  value, onChange, placeholder, clearOnPick,
 }: {
   value: string;                       // ISO-2 code or ""
   onChange: (code: string) => void;
   placeholder?: string;
+  clearOnPick?: boolean;               // act as an "add" box: empty the text after each pick
 }) {
   const [query, setQuery] = useState(value ? countryName(value) : "");
   const [open, setOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function CountrySelect({
 
   const pick = (code: string) => {
     onChange(code);
-    setQuery(countryName(code));
+    setQuery(clearOnPick ? "" : countryName(code));
     setOpen(false);
   };
 

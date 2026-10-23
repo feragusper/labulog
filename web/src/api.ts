@@ -228,7 +228,7 @@ export interface JobItem {
   application_id: number | null;
 }
 export interface JobSource { name: string; url: string; ok: boolean; count: number; error: string | null }
-export interface JobsResult { query: string; location: string; sources: JobSource[]; items: JobItem[] }
+export interface JobsResult { query: string; location: string; zones: string[]; sources: JobSource[]; items: JobItem[] }
 
 export interface Funnel {
   total: number;
@@ -384,10 +384,11 @@ export const api = {
 
   newsMeta: (u: string) => request<NewsMeta>(`/api/feed/news/meta?u=${encodeURIComponent(u)}`),
 
-  jobs: (q: string, location: string | null) => {
+  // zones: null → profile location; [] → no zone filter; else one `location` per zone.
+  jobs: (q: string, zones: string[] | null) => {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (location !== null) params.set("location", location);
+    if (zones !== null) (zones.length ? zones : [""]).forEach((z) => params.append("location", z));
     return request<JobsResult>(`/api/feed/jobs?${params}`);
   },
 

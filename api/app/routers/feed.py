@@ -399,6 +399,7 @@ class SourceStatus(BaseModel):
 class JobsResult(BaseModel):
     query: str
     location: str
+    zones: List[str] = []
     sources: List[SourceStatus]
     items: List[JobItem]
 
@@ -555,6 +556,93 @@ def _adzuna(q: str, location: str) -> List[JobItem]:
     return out
 
 
+def _adzuna_zones(q: str, zones: List[str]) -> List[JobItem]:
+    """One Adzuna query per zone it supports (it is country-scoped)."""
+    supported = [z for z in zones if _adzuna_country(z)[0]]
+    if not supported:
+        raise ValueError("no zone supported by Adzuna")
+    out: List[JobItem] = []
+    for z in supported:
+        out += _cached(("jobs", "Adzuna", q, z), lambda z=z: _adzuna(q, z))
+    return out
+
+
+# ---- zones: match remote postings' location text against chosen countries ----
+_REGION_WORDS = {
+    "eu": ["europe", "european", "eu", "emea", "eea"],
+    "latam": ["latam", "latin america", "south america", "americas", "lat am"],
+    "na": ["north america", "americas"],
+    "apac": ["apac", "asia", "asia pacific"],
+    "mea": ["emea", "middle east", "mena", "africa"],
+}
+# code: (names/aliases, regions)
+_ZONES: Dict[str, Tuple[List[str], List[str]]] = {
+    "AR": (["argentina"], ["latam"]), "BO": (["bolivia"], ["latam"]), "BR": (["brazil", "brasil"], ["latam"]),
+    "CL": (["chile"], ["latam"]), "CO": (["colombia"], ["latam"]), "CR": (["costa rica"], ["latam"]),
+    "DO": (["dominican republic", "república dominicana"], ["latam"]), "EC": (["ecuador"], ["latam"]),
+    "SV": (["el salvador"], ["latam"]), "GT": (["guatemala"], ["latam"]), "HN": (["honduras"], ["latam"]),
+    "MX": (["mexico", "méxico"], ["latam", "na"]), "NI": (["nicaragua"], ["latam"]), "PA": (["panama", "panamá"], ["latam"]),
+    "PY": (["paraguay"], ["latam"]), "PE": (["peru", "perú"], ["latam"]), "PR": (["puerto rico"], ["latam"]),
+    "UY": (["uruguay"], ["latam"]), "VE": (["venezuela"], ["latam"]),
+    "US": (["united states", "usa", "us", "u.s.", "estados unidos"], ["na"]), "CA": (["canada", "canadá"], ["na"]),
+    "AT": (["austria"], ["eu"]), "BE": (["belgium", "bélgica"], ["eu"]), "BG": (["bulgaria"], ["eu"]),
+    "HR": (["croatia"], ["eu"]), "CZ": (["czechia", "czech republic"], ["eu"]), "DK": (["denmark"], ["eu"]),
+    "EE": (["estonia"], ["eu"]), "FI": (["finland"], ["eu"]), "FR": (["france", "francia"], ["eu"]),
+    "DE": (["germany", "deutschland", "alemania"], ["eu"]), "GR": (["greece"], ["eu"]), "HU": (["hungary"], ["eu"]),
+    "IS": (["iceland"], ["eu"]), "IE": (["ireland", "irlanda"], ["eu"]), "IT": (["italy", "italia"], ["eu"]),
+    "LV": (["latvia"], ["eu"]), "LT": (["lithuania"], ["eu"]), "LU": (["luxembourg"], ["eu"]), "MT": (["malta"], ["eu"]),
+    "NL": (["netherlands", "países bajos", "holland"], ["eu"]), "NO": (["norway"], ["eu"]),
+    "PL": (["poland", "polonia"], ["eu"]), "PT": (["portugal"], ["eu"]), "RO": (["romania"], ["eu"]),
+    "RS": (["serbia"], ["eu"]), "SK": (["slovakia"], ["eu"]), "SI": (["slovenia"], ["eu"]),
+    "ES": (["spain", "españa", "espana"], ["eu"]), "SE": (["sweden"], ["eu"]), "CH": (["switzerland", "suiza"], ["eu"]),
+    "GB": (["united kingdom", "uk", "great britain", "england", "reino unido"], ["eu"]), "UA": (["ukraine"], ["eu"]),
+    "TR": (["türkiye", "turkey"], ["eu", "mea"]),
+    "AU": (["australia"], ["apac"]), "NZ": (["new zealand"], ["apac"]), "CN": (["china"], ["apac"]),
+    "HK": (["hong kong"], ["apac"]), "IN": (["india"], ["apac"]), "ID": (["indonesia"], ["apac"]),
+    "JP": (["japan"], ["apac"]), "KR": (["south korea", "korea"], ["apac"]), "MY": (["malaysia"], ["apac"]),
+    "PH": (["philippines"], ["apac"]), "SG": (["singapore"], ["apac"]), "TW": (["taiwan"], ["apac"]),
+    "TH": (["thailand"], ["apac"]), "VN": (["vietnam"], ["apac"]),
+    "EG": (["egypt"], ["mea"]), "IL": (["israel"], ["mea"]), "MA": (["morocco"], ["mea"]),
+    "ZA": (["south africa"], ["mea"]), "AE": (["united arab emirates", "uae"], ["mea"]),
+}
+_ZONE_BY_NAME = {n: code for code, (names, _) in _ZONES.items() for n in names}
+_WORLDWIDE = {"worldwide", "global", "anywhere", "remote", "remoto", "ww", "everywhere"}
+_ANYWHERE_RE = re.compile(r"\b(worldwide|anywhere|global|everywhere)\b", re.I)
+
+
+def _zone_code(zone: str) -> Optional[str]:
+    """'Málaga, Spain' → 'ES'; 'Worldwide' → 'WW'; unknown → None."""
+    parts = [p.strip().lower() for p in zone.split(",") if p.strip()]
+    for p in reversed(parts):
+        if p in _WORLDWIDE:
+            return "WW"
+        if p.upper() in _ZONES:
+            return p.upper()
+        if p in _ZONE_BY_NAME:
+            return _ZONE_BY_NAME[p]
+    return None
+
+
+def _zone_patterns(codes: List[str]) -> re.Pattern:
+    words = set()
+    for c in codes:
+        names, regions = _ZONES[c]
+        words.update(names)
+        for r in regions:
+            words.update(_REGION_WORDS[r])
+    alt = "|".join(re.escape(w) for w in sorted(words, key=len, reverse=True))
+    return re.compile(rf"(?<!\w)({alt})(?!\w)", re.I)
+
+
+def _in_zones(job: JobItem, pattern: Optional[re.Pattern]) -> bool:
+    if pattern is None or job.source == "Adzuna":  # Adzuna results are already country-scoped
+        return True
+    loc = job.location.strip()
+    if not loc or loc.lower() in _WORLDWIDE or _ANYWHERE_RE.search(loc):
+        return True
+    return bool(pattern.search(loc))
+
+
 _SOURCES: List[Tuple[str, str, Callable[[str, str], List[JobItem]]]] = [
     ("Jobicy", "https://jobicy.com", _jobicy),
     ("Himalayas", "https://himalayas.app", _himalayas),
@@ -571,25 +659,33 @@ def _relevant(job: JobItem, terms: List[str]) -> bool:
 @router.get("/jobs", response_model=JobsResult)
 def jobs(
     q: Optional[str] = None,
-    location: Optional[str] = None,
+    location: Optional[List[str]] = Query(None),  # repeat for several zones (countries)
     session: Session = Depends(get_session),
     current: User = Depends(get_current_user),
 ):
     sug = _suggest(session, current)
     role = (q or "").strip() or sug.role
-    loc = sug.location if location is None else location.strip()
+    if location is None:
+        zones = [sug.location] if sug.location else []
+    else:
+        zones = list(dict.fromkeys(z.strip() for z in location if z.strip()))
     terms = _core_terms(role)
     search = " ".join(terms)
 
-    sources = list(_SOURCES)
-    if settings.adzuna_app_id and settings.adzuna_app_key and loc:
-        sources.append(("Adzuna", "https://www.adzuna.com", _adzuna))
+    codes = [_zone_code(z) for z in zones]
+    # Filter by zone only when every zone resolves to a country (and none is "worldwide").
+    known = [c for c in codes if c and c != "WW"]
+    pattern = _zone_patterns(known) if known and len(known) == len(codes) else None
+
+    sources = [(name, url, lambda s, n=name, fn=fn: _cached(("jobs", n, s, ""), lambda: fn(s, "")))
+               for name, url, fn in _SOURCES]
+    if settings.adzuna_app_id and settings.adzuna_app_key and zones:
+        sources.append(("Adzuna", "https://www.adzuna.com", lambda s: _adzuna_zones(s, zones)))
 
     def run(src):
         name, url, fn = src
         try:
-            items = _cached(("jobs", name, search, loc if name == "Adzuna" else ""), lambda: fn(search, loc))
-            return SourceStatus(name=name, url=url, ok=True), items
+            return SourceStatus(name=name, url=url, ok=True), fn(search)
         except Exception as e:  # one broken source must not sink the rest
             return SourceStatus(name=name, url=url, ok=False, error=str(e)[:200]), []
 
@@ -600,7 +696,7 @@ def jobs(
     seen = set()
     statuses = []
     for status, found in results:
-        kept = [j for j in found if j.url and _relevant(j, terms)]
+        kept = [j for j in found if j.url and _relevant(j, terms) and _in_zones(j, pattern)]
         status.count = len(kept)
         statuses.append(status)
         for j in kept:
@@ -623,4 +719,4 @@ def jobs(
             j.application_id = tracked.get(j.url)
 
     items.sort(key=lambda j: j.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-    return JobsResult(query=role, location=loc, sources=statuses, items=items[:150])
+    return JobsResult(query=role, location=", ".join(zones), zones=zones, sources=statuses, items=items[:150])

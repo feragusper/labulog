@@ -4,7 +4,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type JobItem, type JobsResult } from "../api";
 import { useI18n } from "../i18n";
 import { PanelSkeleton, salaryDisplay } from "../components/ui";
+import CountrySelect from "../components/CountrySelect";
+import { countryName, flag, toCountryCode } from "../countries";
 import { ago } from "./News";
+
+// Boards spell tags differently ("Full-Time", "full time", "full_time"): compare a normalized key.
+const tagKey = (x: string) => x.toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+const TOP_TAGS = 14;
+
+// "Málaga, Spain" → flag of its country part, if any.
+const zoneFlag = (z: string) => flag(toCountryCode(z.split(",").pop() ?? "")) || "📍";
 
 function JobCard({ job, onSaved }: { job: JobItem; onSaved: (appId: number) => void }) {
   const { t } = useI18n();
@@ -69,23 +78,26 @@ export default function Jobs() {
   const qc = useQueryClient();
   const suggest = useQuery({ queryKey: ["feed-suggest"], queryFn: api.feedSuggest });
   const [role, setRole] = useState("");
-  const [loc, setLoc] = useState("");
-  const [search, setSearch] = useState<{ q: string; location: string } | null>(null);
+  const [zones, setZones] = useState<string[]>([]);
+  const [search, setSearch] = useState<{ q: string; zones: string[] } | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState(false);
   const [source, setSource] = useState<string>("all");
   const [hideTracked, setHideTracked] = useState(false);
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
     if (suggest.data && search === null) {
-      setRole(suggest.data.role); setLoc(suggest.data.location);
-      setSearch({ q: suggest.data.role, location: suggest.data.location });
+      const z = suggest.data.location ? [suggest.data.location] : [];
+      setRole(suggest.data.role); setZones(z);
+      setSearch({ q: suggest.data.role, zones: z });
     }
   }, [suggest.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const key = ["jobs", search?.q, search?.location];
+  const key = ["jobs", search?.q, search?.zones.join("|")];
   const jobs = useQuery({
     queryKey: key,
-    queryFn: () => api.jobs(search!.q, search!.location),
+    queryFn: () => api.jobs(search!.q, search!.zones),
     enabled: search !== null,
     staleTime: 10 * 60_000,
   });
@@ -97,13 +109,45 @@ export default function Jobs() {
     qc.invalidateQueries({ queryKey: ["applications"] });
   };
 
+  // Tags across the results, most common first; label is the first spelling seen.
+  const tagStats = useMemo(() => {
+    const m = new Map<string, { label: string; count: number }>();
+    for (const j of jobs.data?.items ?? []) {
+      for (const k of new Set(j.tags.map(tagKey).filter(Boolean))) {
+        const e = m.get(k);
+        if (e) e.count++;
+        else m.set(k, { label: j.tags.find((x) => tagKey(x) === k)!, count: 1 });
+      }
+    }
+    return [...m.entries()].map(([k, v]) => ({ key: k, ...v })).sort((a, b) => b.count - a.count);
+  }, [jobs.data]);
+
+  // Drop selected tags that no longer exist after a new search.
+  useEffect(() => {
+    setTags((sel) => sel.filter((k) => tagStats.some((t) => t.key === k)));
+  }, [tagStats]);
+
+  const toggleTag = (k: string) =>
+    setTags((sel) => (sel.includes(k) ? sel.filter((x) => x !== k) : [...sel, k]));
+
   const items = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    return (jobs.data?.items ?? []).filter((j) =>
-      (source === "all" || j.source === source)
-      && (!hideTracked || !j.application_id)
-      && (!f || `${j.title} ${j.company} ${j.location} ${j.tags.join(" ")}`.toLowerCase().includes(f)));
-  }, [jobs.data, source, hideTracked, filter]);
+    return (jobs.data?.items ?? []).filter((j) => {
+      const keys = j.tags.map(tagKey);
+      return (source === "all" || j.source === source)
+        && (!hideTracked || !j.application_id)
+        && tags.every((k) => keys.includes(k))
+        && (!f || `${j.title} ${j.company} ${j.location} ${j.tags.join(" ")}`.toLowerCase().includes(f));
+    });
+  }, [jobs.data, source, hideTracked, filter, tags]);
+
+  const addZone = (code: string) => {
+    const name = countryName(code);
+    if (code && !zones.some((z) => z.toLowerCase() === name.toLowerCase())) setZones([...zones, name]);
+  };
+
+  // Selected tags stay visible even when they fall outside the top list.
+  const shownTags = allTags ? tagStats : tagStats.filter((x, i) => i < TOP_TAGS || tags.includes(x.key));
 
   const sources = jobs.data?.sources ?? [];
 
@@ -112,14 +156,23 @@ export default function Jobs() {
       <h1 className="page-title">{t("jobs.title")}</h1>
       <div className="panel">
         <p className="muted" style={{ marginTop: 0 }}>{t("jobs.desc")}</p>
-        <form className="row" onSubmit={(e) => { e.preventDefault(); setSearch({ q: role.trim(), location: loc.trim() }); }}>
+        <form className="row" onSubmit={(e) => { e.preventDefault(); setSearch({ q: role.trim(), zones }); }}>
           <div>
             <label>{t("jobs.role")}</label>
             <input value={role} placeholder="Android Engineer" onChange={(e) => setRole(e.target.value)} />
           </div>
           <div>
-            <label>{t("jobs.location")}</label>
-            <input value={loc} placeholder="Madrid, Spain" onChange={(e) => setLoc(e.target.value)} />
+            <label>{t("jobs.zones")}</label>
+            <div className="zone-picker">
+              {zones.map((z) => (
+                <span className="zone-chip" key={z}>
+                  {zoneFlag(z)} {z}
+                  <button type="button" aria-label="×" onClick={() => setZones(zones.filter((x) => x !== z))}>×</button>
+                </span>
+              ))}
+              <CountrySelect value="" onChange={addZone} clearOnPick
+                placeholder={zones.length ? t("jobs.addZone") : `${t("jobs.anyZone")} · ${t("jobs.addZone")}`} />
+            </div>
           </div>
           <button className="shrink" type="submit">{t("jobs.search")}</button>
         </form>
@@ -151,6 +204,25 @@ export default function Jobs() {
               <span>{t("jobs.hideTracked")}</span>
             </label>
           </div>
+          {tagStats.length > 0 && (
+            <div className="tag-filters">
+              <span className="muted">{t("jobs.tags")}:</span>
+              {shownTags.map((x) => (
+                <button type="button" key={x.key} className={`tag-chip${tags.includes(x.key) ? " on" : ""}`}
+                  onClick={() => toggleTag(x.key)}>
+                  {x.label}<span className="muted">{x.count}</span>
+                </button>
+              ))}
+              {tagStats.length > TOP_TAGS && (
+                <button type="button" className="tag-chip link" onClick={() => setAllTags(!allTags)}>
+                  {allTags ? t("jobs.lessTags") : `+${tagStats.length - TOP_TAGS} ${t("jobs.moreTags")}`}
+                </button>
+              )}
+              {tags.length > 0 && (
+                <button type="button" className="tag-chip link" onClick={() => setTags([])}>{t("jobs.clearTags")}</button>
+              )}
+            </div>
+          )}
           <p className="muted" style={{ margin: "4px 0 10px" }}>{items.length} {t("common.results")}</p>
           {items.length === 0 ? <p className="muted">{t("jobs.empty")}</p> : (
             <div className="job-list">
